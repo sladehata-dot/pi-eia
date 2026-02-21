@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pi Energy Systems – System Configuration Tool</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #f0f4f8;
+    color: #1a2332;
+    padding: 20px;
+    min-width: 1100px;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: linear-gradient(135deg, #0a2d4e 0%, #1565c0 100%);
+    color: white;
+    padding: 22px 30px;
+    border-radius: 12px;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .header h1 { font-size: 22px; font-weight: 700; }
+  .header .subtitle { font-size: 12px; opacity: 0.75; margin-top: 3px; }
+  .header .badge {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-size: 12px;
+    text-align: center;
+  }
+  .header .badge strong { display: block; font-size: 16px; }
+
+  /* ── STC ALERT BAR ── */
+  .stc-alert {
+    background: #fff8e1;
+    border: 1px solid #ffc107;
+    border-left: 5px solid #ffc107;
+    border-radius: 8px;
+    padding: 10px 16px;
+    margin-bottom: 16px;
+    font-size: 12.5px;
+    color: #5a4000;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .stc-alert .icon { font-size: 18px; flex-shrink: 0; }
+  .stc-alert strong { color: #3a2800; }
+
+  /* ── MAIN LAYOUT ── */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 16px;
+    align-items: start;
+  }
+
+  /* ── PANELS ── */
+  .panel {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    overflow: hidden;
+  }
+
+  .panel-header {
+    background: #0a2d4e;
+    color: white;
+    padding: 11px 18px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .panel-header .sub { font-weight: 400; opacity: 0.7; font-size: 11px; margin-left: auto; }
+
+  .panel-body { padding: 16px 18px; }
+
+  /* ── QUOTE INFO ROW ── */
+  .quote-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 120px;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .field-group label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #7a8a9e;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .field-group input, .field-group select {
+    width: 100%;
+    padding: 7px 10px;
+    border: 1.5px solid #dce3ec;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #1a2332;
+    background: white;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .field-group input:focus, .field-group select:focus { border-color: #1565c0; }
+
+  /* ── ADD PRODUCT BAR ── */
+  .add-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+    align-items: center;
+  }
+  .add-bar select {
+    flex: 1;
+    padding: 7px 10px;
+    border: 1.5px solid #dce3ec;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #1a2332;
+    background: white;
+    outline: none;
+  }
+  .add-bar select:focus { border-color: #1565c0; }
+  .btn-add {
+    background: #1565c0;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 7px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s;
+  }
+  .btn-add:hover { background: #0d47a1; }
+
+  /* ── PRODUCT TABLE ── */
+  .product-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .product-table thead tr { background: #f5f8fc; }
+  .product-table thead th {
+    padding: 8px 10px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    color: #7a8a9e;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    border-bottom: 2px solid #e8eef5;
+  }
+  .product-table thead th:not(:first-child) { text-align: right; }
+  .product-table thead th.center { text-align: center; }
+
+  .product-table tbody tr { border-bottom: 1px solid #f0f4f8; transition: background 0.15s; }
+  .product-table tbody tr:hover { background: #f8fbff; }
+  .product-table tbody td { padding: 8px 10px; vertical-align: middle; }
+  .product-table tbody td:not(:first-child) { text-align: right; }
+  .product-table tbody td.center { text-align: center; }
+
+  .prod-name { font-weight: 600; color: #1a2332; }
+  .prod-cat {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 10px;
+    text-transform: uppercase;
+    margin-right: 4px;
+  }
+  .cat-inverter  { background: #e3f0ff; color: #1565c0; }
+  .cat-battery   { background: #e8f5e9; color: #2e7d32; }
+  .cat-labour    { background: #fff3e0; color: #e65100; }
+  .cat-misc      { background: #f3e5f5; color: #6a1b9a; }
+  .cat-freight   { background: #e0f7fa; color: #00695c; }
+
+  .prod-specs { font-size: 11px; color: #9aa5b4; margin-top: 2px; }
+
+  .qty-input {
+    width: 60px;
+    padding: 5px 8px;
+    border: 1.5px solid #dce3ec;
+    border-radius: 5px;
+    font-size: 13px;
+    text-align: center;
+    outline: none;
+  }
+  .qty-input:focus { border-color: #1565c0; }
+
+  .cost-input {
+    width: 90px;
+    padding: 5px 8px;
+    border: 1.5px solid #dce3ec;
+    border-radius: 5px;
+    font-size: 13px;
+    text-align: right;
+    outline: none;
+  }
+  .cost-input:focus { border-color: #1565c0; }
+
+  .supplier-select {
+    padding: 5px 7px;
+    border: 1.5px solid #dce3ec;
+    border-radius: 5px;
+    font-size: 12px;
+    color: #1a2332;
+    background: white;
+    outline: none;
+    max-width: 140px;
+  }
+  .supplier-select:focus { border-color: #1565c0; }
+
+  .btn-remove {
+    background: none;
+    border: none;
+    color: #ccc;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: all 0.15s;
+    line-height: 1;
+  }
+  .btn-remove:hover { background: #ffeaea; color: #e53935; }
+
+  .val-ex  { font-size: 11px; color: #bbb; display: block; }
+  .val-inc { font-weight: 600; }
+
+  .no-products {
+    text-align: center;
+    color: #aab0ba;
+    font-size: 13px;
+    padding: 28px 0;
+    font-style: italic;
+  }
+
+  /* ── MARGIN / STC PANEL ── */
+  .controls-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 2px solid #f0f4f8;
+  }
+
+  .ctrl-box {
+    background: #f5f8fc;
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .ctrl-box h4 {
+    font-size: 11px;
+    font-weight: 700;
+    color: #7a8a9e;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 10px;
+  }
+
+  .ctrl-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 7px;
+    font-size: 13px;
+  }
+  .ctrl-row:last-child { margin-bottom: 0; }
+  .ctrl-row label { color: #5a6a7e; font-size: 12px; }
+  .ctrl-row input, .ctrl-row select {
+    width: 90px;
+    padding: 5px 8px;
+    border: 1.5px solid #dce3ec;
+    border-radius: 5px;
+    font-size: 13px;
+    text-align: right;
+    outline: none;
+    background: white;
+  }
+  .ctrl-row input:focus, .ctrl-row select:focus { border-color: #1565c0; }
+  .ctrl-row select { text-align: left; width: 130px; }
+
+  .stc-calc-note {
+    font-size: 11px;
+    color: #1565c0;
+    margin-top: 4px;
+    font-style: italic;
+  }
+  .stc-override { color: #e65100 !important; }
+
+  .stc-rule-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-top: 4px;
+  }
+  .rule-pre  { background: #e8f5e9; color: #2e7d32; }
+  .rule-post { background: #fff3e0; color: #e65100; }
+
+  /* ── PRICE SUMMARY PANEL ── */
+  .summary-panel { position: sticky; top: 16px; }
+
+  .sum-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f4f8;
+    font-size: 13px;
+  }
+  .sum-row:last-child { border-bottom: none; }
+  .sum-row .lbl { color: #5a6a7e; }
+  .sum-row .val { font-weight: 600; color: #1a2332; }
+  .sum-row.margin-row .val { color: #1565c0; }
+  .sum-row.gst-row { background: #f0f7ff; margin: 2px -18px; padding: 7px 18px; }
+  .sum-row.gst-row .lbl { color: #1565c0; font-weight: 600; }
+  .sum-row.gst-row .val { color: #1565c0; }
+  .sum-row.rebate-row .lbl { color: #c62828; }
+  .sum-row.rebate-row .val { color: #c62828; font-weight: 700; }
+  .sum-row.total-row {
+    background: #0a2d4e;
+    margin: 10px -18px -16px;
+    padding: 14px 18px;
+    border-radius: 0 0 10px 10px;
+  }
+  .sum-row.total-row .lbl { color: rgba(255,255,255,0.8); font-weight: 700; font-size: 13px; }
+  .sum-row.total-row .val { color: #4fc3f7; font-size: 22px; font-weight: 800; }
+
+  .sum-row.sell-row { border-top: 2px solid #e8eef5; margin-top: 4px; }
+  .sum-row.sell-row .lbl { font-weight: 600; color: #333; }
+  .sum-row.sell-row .val { font-weight: 700; color: #333; }
+
+  .divider-label {
+    text-align: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: #bbb;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 6px 0 2px;
+  }
+
+  /* Supplier breakdown */
+  .supplier-breakdown {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 2px solid #f0f4f8;
+  }
+  .supplier-breakdown h4 {
+    font-size: 11px;
+    font-weight: 700;
+    color: #7a8a9e;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 8px;
+  }
+  .sup-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    padding: 4px 0;
+    color: #5a6a7e;
+  }
+  .sup-row .sup-name { font-weight: 600; color: #1a2332; }
+
+  /* OOP warning */
+  .oop-warning {
+    background: #fff8e1;
+    border: 1px solid #ffc107;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: #5a4000;
+    margin-top: 10px;
+    display: none;
+  }
+
+  /* Battery note */
+  .battery-note {
+    background: #e8f5e9;
+    border: 1px solid #a5d6a7;
+    border-radius: 6px;
+    padding: 7px 12px;
+    font-size: 11.5px;
+    color: #2e7d32;
+    margin-top: 10px;
+    display: none;
+  }
+
+  @media print {
+    body { background: white; padding: 10px; min-width: unset; }
+    .panel { box-shadow: none; border: 1px solid #ddd; }
+    .btn-add, .btn-remove, .add-bar { display: none; }
+    .main-grid { grid-template-columns: 1fr 300px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════ HEADER ══════════════════════ -->
+<div class="header">
+  <div>
+    <h1>Pi Energy Systems — System Configuration Tool</h1>
+    <div class="subtitle">Internal quoting tool &nbsp;|&nbsp; All supplier costs ex GST &nbsp;|&nbsp; GST applied to all costs, STC deducted after</div>
+  </div>
+  <div class="badge">
+    <span>Tool version</span>
+    <strong>Feb 2026</strong>
+  </div>
+</div>
+
+<!-- ══════════════════════ STC ALERT ══════════════════════ -->
+<div class="stc-alert" id="stcAlertBar">
+  <div class="icon">⚡</div>
+  <div id="stcAlertText">
+    <strong>STC Rules:</strong> Loading...
+  </div>
+</div>
+
+<!-- ══════════════════════ MAIN GRID ══════════════════════ -->
+<div class="main-grid">
+
+  <!-- LEFT: CONFIGURATION PANEL -->
+  <div class="panel">
+    <div class="panel-header">
+      ⚙️ System Configuration
+      <span class="sub">Build your system below</span>
+    </div>
+    <div class="panel-body">
+
+      <!-- Quote info -->
+      <div class="quote-row">
+        <div class="field-group">
+          <label>Quote Reference / System Name</label>
+          <input type="text" id="quoteRef" placeholder="e.g. Smith residence – 10kW+Battery" oninput="recalculate()">
+        </div>
+        <div class="field-group">
+          <label>Customer</label>
+          <input type="text" id="customerName" placeholder="Customer name">
+        </div>
+        <div class="field-group">
+          <label>Date</label>
+          <input type="date" id="quoteDate">
+        </div>
+      </div>
+
+      <!-- Add product bar -->
+      <div class="add-bar">
+        <select id="productSelect">
+          <option value="">— Select a product to add —</option>
+        </select>
+        <button class="btn-add" onclick="addProduct()">+ Add to System</button>
+      </div>
+
+      <!-- Product lines table -->
+      <table class="product-table">
+        <thead>
+          <tr>
+            <th style="width:35%">Product</th>
+            <th class="center" style="width:14%">Supplier</th>
+            <th class="center" style="width:7%">Qty</th>
+            <th style="width:13%">Unit Cost<br><span style="font-weight:400;color:#aaa;font-size:10px;">ex GST</span></th>
+            <th style="width:13%">Line Total<br><span style="font-weight:400;color:#aaa;font-size:10px;">ex GST</span></th>
+            <th style="width:13%">Line Total<br><span style="font-weight:400;color:#aaa;font-size:10px;">inc GST</span></th>
+            <th class="center" style="width:5%"></th>
+          </tr>
+        </thead>
+        <tbody id="productLines">
+          <tr id="emptyRow">
+            <td colspan="7" class="no-products">No products added yet. Use the selector above to build your system.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Battery note -->
+      <div class="battery-note" id="batteryNote">
+        🔋 <strong>Battery Configuration:</strong> First module = <strong>Master</strong>, additional modules = <strong>Slave</strong>. All modules same price ($1,700 ex GST).
+      </div>
+
+      <!-- Controls: Margin + STC -->
+      <div class="controls-grid">
+
+        <!-- MARGIN -->
+        <div class="ctrl-box">
+          <h4>💰 Margin</h4>
+          <div class="ctrl-row">
+            <label>Margin %</label>
+            <input type="number" id="marginPct" value="10" min="0" max="100" step="0.5" oninput="recalculate()">
+          </div>
+          <div class="ctrl-row">
+            <label>Applies to</label>
+            <span style="font-size:12px;color:#9aa5b4;">All costs inc labour</span>
+          </div>
+        </div>
+
+        <!-- STC SETTINGS -->
+        <div class="ctrl-box">
+          <h4>🌞 STC Rebate Settings</h4>
+
+          <!-- Zone row — only shown when solar inverter is present -->
+          <div class="ctrl-row" id="zoneRow" style="display:none;">
+            <label>Zone <span style="font-size:10px;color:#aaa;">(solar only)</span></label>
+            <select id="stcZone" onchange="autoCalcStcs()">
+              <option value="1">Zone 1 – Far N QLD, NT</option>
+              <option value="2">Zone 2 – QLD, N WA</option>
+              <option value="3" selected>Zone 3 – NSW/VIC/SA/ACT ✓</option>
+              <option value="4">Zone 4 – TAS / Alpine</option>
+            </select>
+          </div>
+
+          <!-- STC count — read-only when battery-only, editable when solar present -->
+          <div class="ctrl-row">
+            <label>STC count <span id="stcCountLockIcon" style="font-size:10px;color:#aaa;"></span></label>
+            <input type="number" id="stcCount" value="0" min="0" step="1"
+              oninput="stcManualOverride(); recalculate()"
+              style="background:#f5f8fc;">
+          </div>
+          <div class="stc-calc-note" id="stcCalcNote">Add products to calculate</div>
+
+          <!-- Rate row — solar uses editable spot rate; battery uses fixed govt rate -->
+          <div class="ctrl-row" style="margin-top:6px;" id="solarRateRow" style="display:none;">
+            <label>Solar STC rate ($)</label>
+            <input type="number" id="stcRate" value="38" min="0" step="0.5" oninput="recalculate()">
+          </div>
+          <div class="ctrl-row" id="batteryRateRow" style="display:none;">
+            <label>Battery STC rate ($) <span style="font-size:10px;color:#aaa;">govt fixed</span></label>
+            <input type="number" id="batteryStcRate" value="40" min="0" step="0.5" oninput="recalculate()" style="background:#f5f8fc;">
+          </div>
+
+          <div class="ctrl-row">
+            <label>Total STC Rebate</label>
+            <span id="stcRebateDisplay" style="font-weight:700;color:#c62828;font-size:13px;">$0</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: PRICE SUMMARY PANEL -->
+  <div class="panel summary-panel">
+    <div class="panel-header">
+      📊 Price Summary
+      <span class="sub">Live calculation</span>
+    </div>
+    <div class="panel-body">
+
+      <div class="sum-row">
+        <span class="lbl">Total cost ex GST</span>
+        <span class="val" id="sumCostEx">$0.00</span>
+      </div>
+      <div class="sum-row margin-row">
+        <span class="lbl">Margin (<span id="sumMarginPct">10</span>%)</span>
+        <span class="val" id="sumMarginAmt">$0.00</span>
+      </div>
+      <div class="sum-row sell-row">
+        <span class="lbl">Sell price ex GST</span>
+        <span class="val" id="sumSellEx">$0.00</span>
+      </div>
+
+      <div class="divider-label">↓ GST applied to sell price</div>
+
+      <div class="sum-row gst-row">
+        <span class="lbl">GST (10%)</span>
+        <span class="val" id="sumGst">$0.00</span>
+      </div>
+      <div class="sum-row">
+        <span class="lbl">Gross inc GST</span>
+        <span class="val" id="sumGrossInc">$0.00</span>
+      </div>
+
+      <div class="divider-label">↓ STC rebate deducted (GST exempt)</div>
+
+      <div class="sum-row rebate-row">
+        <span class="lbl">Less STC rebate <span id="sumStcLabel" style="font-size:11px;font-weight:400;display:block;margin-top:2px;color:#e57373;"></span></span>
+        <span class="val" id="sumRebate">−$0.00</span>
+      </div>
+
+      <div class="sum-row total-row">
+        <span class="lbl">Customer OOP (inc GST)</span>
+        <span class="val" id="sumOop">$0.00</span>
+      </div>
+
+      <div class="oop-warning" id="oopWarning">
+        ⚠️ STC rebate exceeds gross cost — customer OOP shown as $0.00. Verify STC count and rate.
+      </div>
+
+      <!-- Supplier breakdown -->
+      <div class="supplier-breakdown">
+        <h4>🏭 Supplier Cost Breakdown</h4>
+        <div id="supplierBreakdown">
+          <div class="sup-row" style="color:#bbb;font-style:italic;font-size:12px;">No products added</div>
+        </div>
+      </div>
+
+      <!-- Product count summary -->
+      <div class="supplier-breakdown" id="systemSummary" style="display:none;">
+        <h4>📋 System Summary</h4>
+        <div id="systemSummaryContent"></div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- end main-grid -->
+
+<script>
+// ═══════════════════════════════════════════════════
+// DATA — Add new suppliers / products here
+// ═══════════════════════════════════════════════════
+
+const SUPPLIERS = [
+  { id: 'tz',  name: 'Tradezone (TZ)' },
+  { id: 'osw', name: 'One Stop Warehouse (OSW)' },
+  { id: 'pi',  name: 'Pi Energy (internal)' },
+];
+
+const PRODUCTS = [
+  // ── INVERTERS ──
+  {
+    id: 'foxess-inv-10kw',
+    name: 'FoxESS Hybrid Inverter 10kW',
+    category: 'Inverter',
+    costExGst: 1999,
+    suppliers: ['tz', 'osw'],
+    specs: '10kW | Single Phase | Hybrid',
+    unit: 'unit',
+    inverterKw: 10,          // used for STC auto-calc
+    defaultIncluded: false,
+  },
+  {
+    id: 'foxess-inv-30kw',
+    name: 'FoxESS Hybrid Inverter 30kW',
+    category: 'Inverter',
+    costExGst: 5259,
+    suppliers: ['tz', 'osw'],
+    specs: '30kW | Three Phase | Hybrid',
+    unit: 'unit',
+    inverterKw: 30,
+    defaultIncluded: false,
+  },
+  // ── BATTERIES ──
+  {
+    id: 'foxess-cq6-battery',
+    name: 'FoxESS CQ6 5.99kWh Battery Module',
+    category: 'Battery',
+    costExGst: 1700,
+    suppliers: ['tz', 'osw'],
+    specs: '5.99 kWh | Master + Slave config',
+    unit: 'module',
+    batteryKwh: 5.99,        // used for STC battery calc
+    defaultIncluded: false,
+  },
+  // ── LABOUR ──
+  {
+    id: 'labour',
+    name: 'Labour / Installation',
+    category: 'Labour',
+    costExGst: 1500,
+    suppliers: ['pi'],
+    specs: 'Includes backup circuit (food, lights, comms)',
+    unit: 'job',
+    defaultIncluded: true,
+    costEditable: false,
+  },
+  // ── MISC ──
+  {
+    id: 'misc',
+    name: 'Miscellaneous / Sundries',
+    category: 'Misc',
+    costExGst: 500,
+    suppliers: ['pi'],
+    specs: 'Sundry materials and consumables',
+    unit: 'job',
+    defaultIncluded: true,
+    costEditable: false,
+  },
+  // ── FREIGHT ──
+  {
+    id: 'freight',
+    name: 'Freight',
+    category: 'Freight',
+    costExGst: 0,
+    suppliers: ['tz', 'osw'],
+    specs: 'Optional — enter actual freight cost',
+    unit: 'job',
+    defaultIncluded: false,
+    costEditable: true,      // user types actual freight cost
+  },
+];
+
+// ── SOLAR INVERTER STC SETTINGS ──
+// Solar uses: kW × zone_factor × deeming_years
+const STC_ZONES = {
+  1: 1.622,  // Far north QLD, NT
+  2: 1.536,  // Most of QLD, north WA
+  3: 1.382,  // NSW, VIC, SA, ACT, southern WA (DEFAULT)
+  4: 1.185,  // TAS, alpine
+};
+const STC_DEEMING_END_YEAR = 2030;
+
+// ── BATTERY STC SETTINGS ──
+// Batteries use a FLAT annual STC factor per kWh — NO zone factor, NO deeming years
+// Factor set by CER annually, purchased by government at clearing house price
+// Source: Clean Energy Regulator / DCCEEW
+const BATTERY_STC_FACTORS = {
+  // year: STCs per kWh of usable capacity
+  2025: 9.3,
+  2026: 8.4,
+  2027: 7.5,   // estimated — verify with CER each year
+  2028: 6.0,   // estimated
+  2029: 4.5,   // estimated
+};
+// Government clearing house rate for battery STCs (separate to solar STC spot rate)
+const BATTERY_STC_GOVT_RATE = 40;  // $40 per STC — government purchase price
+
+// Battery STC tapering from 1 May 2026 (applied ON TOP of the annual factor)
+const BATTERY_STC_TAPER_DATE = new Date('2026-05-01');
+// Tapering bands: what % of the kWh in each band earns full STC factor
+const BATTERY_STC_TAPER_BANDS = [
+  { from: 0,  to: 14, pct: 1.00 },  // 0–14kWh: 100% of factor
+  { from: 14, to: 28, pct: 0.60 },  // 14–28kWh: 60% of factor
+  { from: 28, to: 50, pct: 0.15 },  // 28–50kWh: 15% of factor
+];
+const BATTERY_STC_MAX_KWH = 50;  // STCs only claimable on first 50kWh
+
+// ═══════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════
+
+let lineItems = [];   // { productId, supplierId, qty, customCost }
+let stcOverridden = false;
+let rowCounter = 0;
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Set today's date
+  document.getElementById('quoteDate').value = new Date().toISOString().split('T')[0];
+
+  // Populate product selector
+  const sel = document.getElementById('productSelect');
+  const categories = {};
+  PRODUCTS.forEach(p => {
+    if (!categories[p.category]) categories[p.category] = [];
+    categories[p.category].push(p);
+  });
+  Object.entries(categories).forEach(([cat, prods]) => {
+    const og = document.createElement('optgroup');
+    og.label = cat;
+    prods.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = `${p.name} ($${p.costExGst.toLocaleString()} ex GST)`;
+      og.appendChild(opt);
+    });
+    sel.appendChild(og);
+  });
+
+  // Add default included products
+  PRODUCTS.filter(p => p.defaultIncluded).forEach(p => {
+    addProductById(p.id, p.suppliers[0]);
+  });
+
+  // Set STC alert
+  updateStcAlert();
+  recalculate();
+});
+
+// ═══════════════════════════════════════════════════
+// STC ALERT BAR
+// ═══════════════════════════════════════════════════
+
+function updateStcAlert() {
+  const now = new Date();
+  const postTaper = now >= BATTERY_STC_TAPER_DATE;
+  const demYears = Math.max(1, STC_DEEMING_END_YEAR - now.getFullYear());
+  const alertEl = document.getElementById('stcAlertText');
+
+  const batteryFactor = BATTERY_STC_FACTORS[now.getFullYear()]
+    || BATTERY_STC_FACTORS[Math.max(...Object.keys(BATTERY_STC_FACTORS).map(Number))];
+
+  if (postTaper) {
+    alertEl.innerHTML = `
+      <strong>⚠️ Post-May 2026 Battery STC Tapering Active</strong><br>
+      <strong>☀️ Solar STCs:</strong> kW × zone factor × ${demYears} deeming years (location matters) | Solar spot rate editable below.<br>
+      <strong>🔋 Battery STCs:</strong> ${batteryFactor} STCs/kWh (${now.getFullYear()} flat rate — <em>no zone factor, same Australia-wide</em>) |
+      Tapered: 0–14kWh @ 100%, 14–28kWh @ 60%, 28–50kWh @ 15% | Max 50kWh eligible |
+      Govt clearing house rate: <strong>$${BATTERY_STC_GOVT_RATE}/STC</strong>.
+    `;
+    document.getElementById('stcAlertBar').style.borderLeftColor = '#e65100';
+    document.getElementById('stcAlertBar').style.borderColor = '#ffcc80';
+    document.getElementById('stcAlertBar').style.background = '#fff3e0';
+  } else {
+    alertEl.innerHTML = `
+      <strong>STC Rules — Current</strong><br>
+      <strong>☀️ Solar STCs:</strong> kW × zone factor × ${demYears} deeming years (location-based, scheme ends 2030).<br>
+      <strong>🔋 Battery STCs:</strong> ${batteryFactor} STCs/kWh flat rate (${now.getFullYear()}) — <em>NO zone factor, same rate across all of Australia</em> |
+      Max 50kWh eligible | Govt clearing house rate: <strong>$${BATTERY_STC_GOVT_RATE}/STC</strong>.
+      Full capacity factor applies until 1 May 2026, then tapering begins.
+    `;
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// ADD / REMOVE PRODUCTS
+// ═══════════════════════════════════════════════════
+
+function addProduct() {
+  const sel = document.getElementById('productSelect');
+  const id = sel.value;
+  if (!id) return;
+  const prod = PRODUCTS.find(p => p.id === id);
+  addProductById(id, prod.suppliers[0]);
+  sel.value = '';
+}
+
+function addProductById(productId, supplierId) {
+  const prod = PRODUCTS.find(p => p.id === productId);
+  if (!prod) return;
+
+  rowCounter++;
+  const rowId = `row-${rowCounter}`;
+  lineItems.push({ rowId, productId, supplierId, qty: 1, customCost: prod.costEditable ? 0 : null });
+
+  renderTable();
+  autoCalcStcs();
+  recalculate();
+}
+
+function removeProduct(rowId) {
+  lineItems = lineItems.filter(li => li.rowId !== rowId);
+  renderTable();
+  stcOverridden = false;
+  autoCalcStcs();
+  recalculate();
+}
+
+// ═══════════════════════════════════════════════════
+// RENDER TABLE
+// ═══════════════════════════════════════════════════
+
+function renderTable() {
+  const tbody = document.getElementById('productLines');
+  tbody.innerHTML = '';
+
+  if (lineItems.length === 0) {
+    tbody.innerHTML = '<tr id="emptyRow"><td colspan="7" class="no-products">No products added yet. Use the selector above to build your system.</td></tr>';
+    document.getElementById('batteryNote').style.display = 'none';
+    document.getElementById('systemSummary').style.display = 'none';
+    return;
+  }
+
+  let hasBattery = false;
+
+  lineItems.forEach(li => {
+    const prod = PRODUCTS.find(p => p.id === li.productId);
+    if (!prod) return;
+    if (prod.category === 'Battery') hasBattery = true;
+
+    const costEx = li.customCost !== null ? li.customCost : prod.costExGst;
+    const lineEx = costEx * li.qty;
+    const lineInc = lineEx * 1.10;
+
+    const tr = document.createElement('tr');
+    tr.id = li.rowId;
+
+    // Category badge colour
+    const catClass = `cat-${prod.category.toLowerCase()}`;
+
+    // Supplier options
+    let supplierOpts = prod.suppliers.map(sid => {
+      const sup = SUPPLIERS.find(s => s.id === sid);
+      return `<option value="${sid}" ${sid === li.supplierId ? 'selected' : ''}>${sup.name}</option>`;
+    }).join('');
+
+    // Cost cell — editable if freight/custom
+    const costCell = prod.costEditable
+      ? `<input class="cost-input" type="number" min="0" step="10" value="${costEx}"
+           onchange="updateCustomCost('${li.rowId}', this.value)">`
+      : `$${costEx.toLocaleString('en-AU', {minimumFractionDigits:2})}`;
+
+    tr.innerHTML = `
+      <td>
+        <span class="prod-cat ${catClass}">${prod.category}</span>
+        <span class="prod-name">${prod.name}</span>
+        <div class="prod-specs">${prod.specs}</div>
+      </td>
+      <td class="center">
+        <select class="supplier-select" onchange="updateSupplier('${li.rowId}', this.value)">${supplierOpts}</select>
+      </td>
+      <td class="center">
+        <input class="qty-input" type="number" min="1" max="99" value="${li.qty}"
+          onchange="updateQty('${li.rowId}', this.value)">
+      </td>
+      <td>${costCell}</td>
+      <td>
+        <span class="val-ex">$${costEx.toLocaleString('en-AU', {minimumFractionDigits:2})} × ${li.qty}</span>
+        <span class="val-inc">$${lineEx.toLocaleString('en-AU', {minimumFractionDigits:2})}</span>
+      </td>
+      <td>
+        <span class="val-inc">$${lineInc.toLocaleString('en-AU', {minimumFractionDigits:2})}</span>
+      </td>
+      <td class="center">
+        <button class="btn-remove" onclick="removeProduct('${li.rowId}')" title="Remove">×</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('batteryNote').style.display = hasBattery ? 'block' : 'none';
+}
+
+// ═══════════════════════════════════════════════════
+// LINE ITEM UPDATES
+// ═══════════════════════════════════════════════════
+
+function updateQty(rowId, val) {
+  const li = lineItems.find(l => l.rowId === rowId);
+  if (li) li.qty = Math.max(1, parseInt(val) || 1);
+  renderTable();
+  stcOverridden = false;
+  autoCalcStcs();
+  recalculate();
+}
+
+function updateSupplier(rowId, val) {
+  const li = lineItems.find(l => l.rowId === rowId);
+  if (li) li.supplierId = val;
+  recalculate();
+}
+
+function updateCustomCost(rowId, val) {
+  const li = lineItems.find(l => l.rowId === rowId);
+  if (li) li.customCost = parseFloat(val) || 0;
+  renderTable();
+  recalculate();
+}
+
+// ═══════════════════════════════════════════════════
+// STC AUTO-CALCULATION
+// ═══════════════════════════════════════════════════
+
+function getDemingYears() {
+  const now = new Date();
+  return Math.max(1, STC_DEEMING_END_YEAR - now.getFullYear());
+}
+
+function getBatterySolarStcs() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const zone = parseFloat(document.getElementById('stcZone').value);
+  const zoneFactor = STC_ZONES[zone];
+  const demYears = getDemingYears();
+  const postTaper = now >= BATTERY_STC_TAPER_DATE;
+
+  // ── SOLAR INVERTER STCs ──
+  // Formula: kW × zone_factor × deeming_years  (location matters)
+  let inverterKwTotal = 0;
+  lineItems.forEach(li => {
+    const prod = PRODUCTS.find(p => p.id === li.productId);
+    if (prod && prod.inverterKw) inverterKwTotal += prod.inverterKw * li.qty;
+  });
+  const inverterStcs = Math.round(inverterKwTotal * zoneFactor * demYears);
+
+  // ── BATTERY STCs ──
+  // Formula: eligible_kWh × annual_STC_factor  (NO zone factor, NO deeming years)
+  // Government purchases battery STCs at clearing house price ($40)
+  let batteryKwhTotal = 0;
+  lineItems.forEach(li => {
+    const prod = PRODUCTS.find(p => p.id === li.productId);
+    if (prod && prod.batteryKwh) batteryKwhTotal += prod.batteryKwh * li.qty;
+  });
+
+  // Cap at 50kWh max eligible
+  const eligibleKwh = Math.min(batteryKwhTotal, BATTERY_STC_MAX_KWH);
+
+  // Get the annual STC factor for current year (fall back to last known)
+  const batteryFactor = BATTERY_STC_FACTORS[year]
+    || BATTERY_STC_FACTORS[Math.max(...Object.keys(BATTERY_STC_FACTORS).map(Number))];
+
+  let batteryStcs = 0;
+  if (eligibleKwh > 0) {
+    if (!postTaper) {
+      // Pre 1 May 2026: full factor on all eligible kWh, no tapering
+      batteryStcs = Math.round(eligibleKwh * batteryFactor);
+    } else {
+      // Post 1 May 2026: tapering by capacity band
+      let effectiveKwh = 0;
+      let remaining = eligibleKwh;
+      BATTERY_STC_TAPER_BANDS.forEach(band => {
+        const bandSize = band.to - band.from;
+        const inBand = Math.min(remaining, bandSize);
+        effectiveKwh += inBand * band.pct;
+        remaining -= inBand;
+      });
+      batteryStcs = Math.round(effectiveKwh * batteryFactor);
+    }
+  }
+
+  return {
+    inverterStcs, batteryStcs,
+    total: inverterStcs + batteryStcs,
+    inverterKwTotal, batteryKwhTotal, eligibleKwh,
+    demYears, zoneFactor, postTaper,
+    batteryFactor, year
+  };
+}
+
+function autoCalcStcs() {
+  if (stcOverridden) return;
+  const { total, inverterStcs, batteryStcs, inverterKwTotal, batteryKwhTotal,
+          eligibleKwh, demYears, zoneFactor, postTaper, batteryFactor, year } = getBatterySolarStcs();
+
+  const hasSolar   = inverterKwTotal > 0;
+  const hasBattery = batteryKwhTotal > 0;
+
+  // ── Show/hide zone selector (solar only) ──
+  document.getElementById('zoneRow').style.display = hasSolar ? 'flex' : 'none';
+
+  // ── Show/hide rate rows ──
+  document.getElementById('solarRateRow').style.display   = hasSolar   ? 'flex' : 'none';
+  document.getElementById('batteryRateRow').style.display = hasBattery ? 'flex' : 'none';
+
+  // ── Lock STC count field when battery-only (auto-fixed, not user-editable) ──
+  const stcInput = document.getElementById('stcCount');
+  const lockIcon = document.getElementById('stcCountLockIcon');
+  if (hasSolar) {
+    // Solar present: count is editable (user can override zone/deeming)
+    stcInput.readOnly = false;
+    stcInput.style.background = 'white';
+    stcInput.style.cursor = 'text';
+    lockIcon.textContent = '(editable)';
+    lockIcon.style.color = '#9aa5b4';
+  } else {
+    // Battery-only: count is auto-calculated from govt formula, not user-editable
+    stcInput.readOnly = true;
+    stcInput.style.background = '#f5f8fc';
+    stcInput.style.cursor = 'not-allowed';
+    lockIcon.textContent = '🔒 auto (battery rate fixed)';
+    lockIcon.style.color = '#aaa';
+  }
+
+  stcInput.value = total;
+
+  // ── Build calculation note ──
+  let parts = [];
+
+  if (hasSolar) {
+    parts.push(`☀️ Solar: ${inverterKwTotal}kW × zone(${zoneFactor}) × ${demYears}yrs = ${inverterStcs} STCs`);
+  }
+
+  if (hasBattery) {
+    let batNote = `🔋 Battery: ${batteryKwhTotal.toFixed(2)}kWh`;
+    if (batteryKwhTotal > BATTERY_STC_MAX_KWH) batNote += ` (capped at ${BATTERY_STC_MAX_KWH}kWh eligible)`;
+    batNote += ` × ${batteryFactor} (${year} CER factor, no zone) = ${batteryStcs} STCs`;
+    if (postTaper) batNote += ` [post-May 2026 tapering applied]`;
+    parts.push(batNote);
+  }
+
+  const note = parts.length ? parts.join('  |  ') : 'Add products to auto-calculate STCs';
+  const noteEl = document.getElementById('stcCalcNote');
+  noteEl.textContent = note;
+  noteEl.className = 'stc-calc-note';
+
+  recalculate();
+}
+
+function stcManualOverride() {
+  // Only allow manual override when a solar inverter is in the system
+  const hasSolar = lineItems.some(li => {
+    const prod = PRODUCTS.find(p => p.id === li.productId);
+    return prod && prod.inverterKw;
+  });
+  if (!hasSolar) {
+    // Revert the change — battery STC count is locked
+    autoCalcStcs();
+    return;
+  }
+  stcOverridden = true;
+  const noteEl = document.getElementById('stcCalcNote');
+  noteEl.textContent = '⚠️ Solar STC count manually overridden — remove and re-add inverter to restore auto-calculation';
+  noteEl.className = 'stc-calc-note stc-override';
+}
+
+// ═══════════════════════════════════════════════════
+// RECALCULATE
+// ═══════════════════════════════════════════════════
+
+function recalculate() {
+  // 1. Total cost ex GST
+  let totalCostEx = 0;
+  const supplierTotals = {};
+  SUPPLIERS.forEach(s => supplierTotals[s.id] = 0);
+
+  lineItems.forEach(li => {
+    const prod = PRODUCTS.find(p => p.id === li.productId);
+    if (!prod) return;
+    const costEx = li.customCost !== null ? li.customCost : prod.costExGst;
+    const lineEx = costEx * li.qty;
+    totalCostEx += lineEx;
+    if (supplierTotals[li.supplierId] !== undefined) {
+      supplierTotals[li.supplierId] += lineEx;
+    }
+  });
+
+  // 2. Margin
+  const marginPct = parseFloat(document.getElementById('marginPct').value) || 0;
+  const marginAmt = totalCostEx * (marginPct / 100);
+  const sellPriceEx = totalCostEx + marginAmt;
+
+  // 3. GST on sell price
+  const gstAmt = sellPriceEx * 0.10;
+  const grossInc = sellPriceEx + gstAmt; // = sellPriceEx * 1.10
+
+  // 4. STC rebate (GST exempt)
+  // Solar and battery STCs are calculated separately and use different rates
+  const { inverterStcs, batteryStcs, inverterKwTotal, batteryKwhTotal } = getBatterySolarStcs();
+  const hasSolar   = inverterKwTotal > 0;
+  const hasBattery = batteryKwhTotal > 0;
+
+  // Solar: editable spot rate (default $38)
+  const solarRate   = parseFloat(document.getElementById('stcRate').value) || 0;
+  // Battery: government fixed clearing house rate (default $40)
+  const batteryRate = parseFloat(document.getElementById('batteryStcRate').value) || 0;
+
+  // If solar STC count manually overridden, use the overridden total count × solar rate
+  // Otherwise use the split calculation
+  let stcRebate = 0;
+  let stcCount  = 0;
+  if (stcOverridden && hasSolar) {
+    // Manual override — whole count uses solar rate
+    stcCount  = parseInt(document.getElementById('stcCount').value) || 0;
+    stcRebate = stcCount * solarRate;
+  } else {
+    // Auto — split: solar at spot rate, battery at govt rate
+    const solarRebate   = inverterStcs * solarRate;
+    const batteryRebate = batteryStcs  * batteryRate;
+    stcRebate = solarRebate + batteryRebate;
+    stcCount  = inverterStcs + batteryStcs;
+  }
+
+  // 5. OOP
+  const oop = Math.max(0, grossInc - stcRebate);
+  const oopNegative = (grossInc - stcRebate) < 0;
+
+  // Update summary
+  const fmt = (n) => '$' + n.toLocaleString('en-AU', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+  document.getElementById('sumCostEx').textContent    = fmt(totalCostEx);
+  document.getElementById('sumMarginPct').textContent = marginPct;
+  document.getElementById('sumMarginAmt').textContent = fmt(marginAmt);
+  document.getElementById('sumSellEx').textContent    = fmt(sellPriceEx);
+  document.getElementById('sumGst').textContent       = fmt(gstAmt);
+  document.getElementById('sumGrossInc').textContent  = fmt(grossInc);
+  document.getElementById('sumOop').textContent       = fmt(oop);
+  document.getElementById('stcRebateDisplay').textContent = fmt(stcRebate);
+
+  // Build rebate label — show split if both solar and battery present
+  let rebateLabel = '';
+  if (hasSolar && hasBattery && !stcOverridden) {
+    rebateLabel = `☀️ ${inverterStcs} × $${solarRate.toFixed(0)} + 🔋 ${batteryStcs} × $${batteryRate.toFixed(0)}`;
+  } else if (hasSolar) {
+    rebateLabel = `${stcCount} STCs × $${solarRate.toFixed(0)}`;
+  } else if (hasBattery) {
+    rebateLabel = `🔋 ${batteryStcs} STCs × $${batteryRate.toFixed(0)} (govt rate)`;
+  } else {
+    rebateLabel = '0 STCs';
+  }
+  document.getElementById('sumRebate').textContent    = '−' + fmt(stcRebate);
+  document.getElementById('sumStcLabel').textContent  = rebateLabel;
+
+  document.getElementById('oopWarning').style.display = oopNegative ? 'block' : 'none';
+
+  // Supplier breakdown
+  const sbEl = document.getElementById('supplierBreakdown');
+  sbEl.innerHTML = '';
+  let anySupplier = false;
+  SUPPLIERS.forEach(s => {
+    if (supplierTotals[s.id] > 0) {
+      anySupplier = true;
+      const d = document.createElement('div');
+      d.className = 'sup-row';
+      d.innerHTML = `<span class="sup-name">${s.name}</span><span>${fmt(supplierTotals[s.id])} <span style="color:#bbb;font-size:11px;">ex GST</span></span>`;
+      sbEl.appendChild(d);
+    }
+  });
+  if (!anySupplier) {
+    sbEl.innerHTML = '<div class="sup-row" style="color:#bbb;font-style:italic;font-size:12px;">No products added</div>';
+  }
+
+  // System summary
+  updateSystemSummary();
+}
+
+// ═══════════════════════════════════════════════════
+// SYSTEM SUMMARY
+// ═══════════════════════════════════════════════════
+
+function updateSystemSummary() {
+  const summaryEl = document.getElementById('systemSummaryContent');
+  const summaryPanel = document.getElementById('systemSummary');
+
+  if (lineItems.length === 0) {
+    summaryPanel.style.display = 'none';
+    return;
+  }
+
+  summaryPanel.style.display = 'block';
+  summaryEl.innerHTML = '';
+
+  // Group by category
+  const groups = {};
+  lineItems.forEach(li => {
+    const prod = PRODUCTS.find(p => p.id === li.productId);
+    if (!prod) return;
+    if (!groups[prod.category]) groups[prod.category] = [];
+    groups[prod.category].push({ prod, li });
+  });
+
+  Object.entries(groups).forEach(([cat, items]) => {
+    items.forEach(({ prod, li }) => {
+      const d = document.createElement('div');
+      d.className = 'sup-row';
+      const sup = SUPPLIERS.find(s => s.id === li.supplierId);
+      d.innerHTML = `<span style="color:#5a6a7e;">${li.qty}× ${prod.name.replace('FoxESS ','')}</span><span style="color:#9aa5b4;font-size:11px;">${sup ? sup.name : ''}</span>`;
+      summaryEl.appendChild(d);
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// ZONE CHANGE
+// ═══════════════════════════════════════════════════
+document.getElementById('stcZone').addEventListener('change', () => {
+  stcOverridden = false;
+  autoCalcStcs();
+});
+
+</script>
+</body>
+</html>
