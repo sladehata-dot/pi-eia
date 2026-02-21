@@ -863,6 +863,7 @@ function addProductById(productId, supplierId) {
     li.priceMode   = 'cpw';      // 'cpw' = cents per watt | 'panel' = price per panel
     li.cpw         = 35;         // default cents per watt
     li.panelPrice  = 140;        // default price per panel ($)
+    li.labourCpw   = 30;         // default solar labour rate: 30 c/W ($0.30/W)
   }
   lineItems.push(li);
 
@@ -884,12 +885,14 @@ function removeProduct(rowId) {
 // ═══════════════════════════════════════════════════
 
 // ── SOLAR PANEL COST HELPER ──
-// Returns { costPerPanel, lineEx, systemKw } for a solar panel line item
+// Returns { costPerPanel, lineEx, systemKw, labourEx, totalLineEx } for a solar panel line item
+// labourEx = total solar installation labour cost at labourCpw c/W for ALL panels in this line
 function solarPanelCalc(li) {
   const panelW     = parseFloat(li.panelW)    || 0;
   const qty        = parseInt(li.qty)          || 1;
-  const cpw        = parseFloat(li.cpw)        || 0;   // cents per watt
-  const panelPrice = parseFloat(li.panelPrice) || 0;   // $ per panel
+  const cpw        = parseFloat(li.cpw)        || 0;   // panel price: cents per watt
+  const panelPrice = parseFloat(li.panelPrice) || 0;   // panel price: $ per panel
+  const labourCpw  = parseFloat(li.labourCpw !== undefined ? li.labourCpw : 30) || 0; // labour: c/W
 
   let costPerPanel = 0;
   if (li.priceMode === 'cpw') {
@@ -897,9 +900,11 @@ function solarPanelCalc(li) {
   } else {
     costPerPanel = panelPrice;
   }
-  const lineEx   = costPerPanel * qty;
-  const systemKw = (panelW * qty) / 1000;  // total kW of panels
-  return { costPerPanel, lineEx, systemKw };
+  const systemKw  = (panelW * qty) / 1000;           // total kW of panels
+  const lineEx    = costPerPanel * qty;               // panel hardware cost ex GST
+  const labourEx  = (panelW * qty * labourCpw) / 100; // solar labour: total W × c/W ÷ 100
+  const totalLineEx = lineEx + labourEx;              // panel hardware + labour combined
+  return { costPerPanel, lineEx, labourEx, totalLineEx, systemKw };
 }
 
 function renderTable() {
@@ -925,7 +930,7 @@ function renderTable() {
     if (prod.isSolarPanel) {
       const calc = solarPanelCalc(li);
       costEx  = calc.costPerPanel;
-      lineEx  = calc.lineEx;
+      lineEx  = calc.totalLineEx;   // includes solar labour
       lineInc = lineEx * 1.10;
       specExtra = `${li.panelW}W × ${li.qty} panels = ${calc.systemKw.toFixed(2)}kW`;
     } else {
@@ -969,11 +974,15 @@ function renderTable() {
       </td>
       <td>${costCell}</td>
       <td>
-        <span class="val-ex">$${costEx.toLocaleString('en-AU', {minimumFractionDigits:2})} × ${li.qty}</span>
-        <span class="val-inc">$${lineEx.toLocaleString('en-AU', {minimumFractionDigits:2})}</span>
+        ${prod.isSolarPanel
+          ? `<span class="val-ex" style="color:#2e7d32;">panels + labour</span>
+             <span class="val-inc" style="color:#2e7d32;">$${lineEx.toLocaleString('en-AU', {minimumFractionDigits:2})}</span>`
+          : `<span class="val-ex">$${costEx.toLocaleString('en-AU', {minimumFractionDigits:2})} × ${li.qty}</span>
+             <span class="val-inc">$${lineEx.toLocaleString('en-AU', {minimumFractionDigits:2})}</span>`
+        }
       </td>
       <td>
-        <span class="val-inc">$${lineInc.toLocaleString('en-AU', {minimumFractionDigits:2})}</span>
+        <span class="val-inc" ${prod.isSolarPanel ? 'style="color:#2e7d32;"' : ''}>$${lineInc.toLocaleString('en-AU', {minimumFractionDigits:2})}</span>
       </td>
       <td class="center">
         <button class="btn-remove" onclick="removeProduct('${li.rowId}')" title="Remove">×</button>
@@ -983,15 +992,18 @@ function renderTable() {
 
     // ── Solar panel: extra config row beneath main row ──
     if (prod.isSolarPanel) {
-      const trSolar = document.createElement('tr');
-      trSolar.style.background = '#f0f7f0';
-      trSolar.style.borderBottom = '2px solid #c8e6c9';
       const cpwChecked    = li.priceMode === 'cpw'   ? 'selected' : '';
       const panelChecked  = li.priceMode === 'panel' ? 'selected' : '';
       const calc = solarPanelCalc(li);
+      const labourCpwVal  = li.labourCpw !== undefined ? li.labourCpw : 30;
+
+      // ── Row 1: Panel hardware config ──
+      const trSolar = document.createElement('tr');
+      trSolar.style.background = '#f0f7f0';
       trSolar.innerHTML = `
-        <td colspan="7" style="padding:8px 12px 10px 28px;">
+        <td colspan="7" style="padding:8px 12px 6px 28px;border-bottom:1px solid #dcedc8;">
           <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:13px;">
+            <span style="color:#2e7d32;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:0.4px;min-width:80px;">☀️ Panels</span>
             <div style="display:flex;align-items:center;gap:6px;">
               <label style="color:#2e7d32;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.3px;">Panel size</label>
               <input type="number" min="1" max="800" step="5" value="${li.panelW}"
@@ -1024,12 +1036,40 @@ function renderTable() {
             <div style="margin-left:auto;display:flex;gap:20px;font-size:12px;color:#555;">
               <span>Cost/panel: <strong>$${calc.costPerPanel.toFixed(2)}</strong></span>
               <span>System: <strong>${calc.systemKw.toFixed(2)} kW</strong></span>
-              <span style="color:#2e7d32;font-weight:700;">Line total ex GST: $${calc.lineEx.toFixed(2)}</span>
+              <span style="color:#558b2f;">Panels ex GST: <strong>$${calc.lineEx.toFixed(2)}</strong></span>
             </div>
           </div>
         </td>
       `;
       tbody.appendChild(trSolar);
+
+      // ── Row 2: Solar labour config ──
+      const trLabour = document.createElement('tr');
+      trLabour.style.background = '#f1f8e9';
+      trLabour.style.borderBottom = '2px solid #c8e6c9';
+      trLabour.innerHTML = `
+        <td colspan="7" style="padding:6px 12px 10px 28px;">
+          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:13px;">
+            <span style="color:#33691e;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:0.4px;min-width:80px;">🔧 Solar Labour</span>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <label style="color:#33691e;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.3px;">Rate</label>
+              <input type="number" min="0" max="200" step="0.5" value="${labourCpwVal}"
+                style="width:72px;padding:4px 7px;border:1.5px solid #aed581;border-radius:5px;font-size:13px;text-align:right;background:white;"
+                onchange="updateSolarPanel('${li.rowId}','labourCpw',this.value)"
+                title="Solar installation labour rate in cents per watt">
+              <span style="color:#555;">c/W</span>
+            </div>
+            <span style="font-size:12px;color:#777;">
+              = ${calc.systemKw.toFixed(2)} kW × ${labourCpwVal} c/W
+            </span>
+            <div style="margin-left:auto;display:flex;gap:20px;font-size:12px;color:#555;">
+              <span style="color:#33691e;">Labour ex GST: <strong>$${calc.labourEx.toFixed(2)}</strong></span>
+              <span style="color:#2e7d32;font-weight:700;font-size:13px;">Combined line ex GST: $${calc.totalLineEx.toFixed(2)}</span>
+            </div>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(trLabour);
     }
   });
 
@@ -1065,7 +1105,7 @@ function updateCustomCost(rowId, val) {
 function updateSolarPanel(rowId, field, val) {
   const li = lineItems.find(l => l.rowId === rowId);
   if (!li) return;
-  if (field === 'panelW' || field === 'cpw' || field === 'panelPrice') {
+  if (field === 'panelW' || field === 'cpw' || field === 'panelPrice' || field === 'labourCpw') {
     li[field] = parseFloat(val) || 0;
   } else {
     li[field] = val;
@@ -1253,10 +1293,10 @@ function recalculate() {
   lineItems.forEach(li => {
     const prod = PRODUCTS.find(p => p.id === li.productId);
     if (!prod) return;
-    // Solar panels use dynamic cost calc; all others use costExGst or customCost
+    // Solar panels use dynamic cost calc (includes solar labour); all others use costExGst or customCost
     let lineEx;
     if (prod.isSolarPanel) {
-      lineEx = solarPanelCalc(li).lineEx;
+      lineEx = solarPanelCalc(li).totalLineEx;  // panels + solar labour combined
     } else {
       const costEx = li.customCost !== null ? li.customCost : prod.costExGst;
       lineEx = costEx * li.qty;
