@@ -189,6 +189,7 @@
   .cat-labour    { background: #fff3e0; color: #e65100; }
   .cat-misc      { background: #f3e5f5; color: #6a1b9a; }
   .cat-freight   { background: #e0f7fa; color: #00695c; }
+  .cat-kit       { background: #fce4ec; color: #880e4f; }
 
   .prod-specs { font-size: 11px; color: #9aa5b4; margin-top: 2px; }
 
@@ -630,6 +631,7 @@
 const SUPPLIERS = [
   { id: 'tz',  name: 'Tradezone (TZ)' },
   { id: 'osw', name: 'One Stop Warehouse (OSW)' },
+  { id: 'az',  name: 'AZ Energy / HyXiPower' },
   { id: 'pi',  name: 'Pi Energy (internal)' },
 ];
 
@@ -667,6 +669,19 @@ const PRODUCTS = [
     specs: '5.99 kWh | Master + Slave config',
     unit: 'module',
     batteryKwh: 5.99,        // used for STC battery calc
+    defaultIncluded: false,
+  },
+  // ── HYXIPOWER KITS (AZ Energy) ──
+  {
+    id: 'hyxipower-kit-2x5kw',
+    name: 'HyXiPower 2× 5kW Inverter + 42.4kWh Battery Kit',
+    category: 'Kit',
+    costExGst: 11600,
+    suppliers: ['az'],
+    specs: '2× 5kW Inverters | 8× Battery Modules (42.4kWh) | 2× Base | 2× Meter',
+    unit: 'kit',
+    inverterKw: 10,      // 2 × 5kW — used for solar STC calc if solar panels added
+    batteryKwh: 42.4,    // total usable battery capacity — used for battery STC calc
     defaultIncluded: false,
   },
   // ── LABOUR ──
