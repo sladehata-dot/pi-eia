@@ -190,6 +190,7 @@
   .cat-misc      { background: #f3e5f5; color: #6a1b9a; }
   .cat-freight   { background: #e0f7fa; color: #00695c; }
   .cat-kit       { background: #fce4ec; color: #880e4f; }
+  .cat-other     { background: #f5f5f5; color: #616161; }
 
   .prod-specs { font-size: 11px; color: #9aa5b4; margin-top: 2px; }
 
@@ -491,6 +492,39 @@
           <option value="">— Select a product to add —</option>
         </select>
         <button class="btn-add" onclick="addProduct()">+ Add to System</button>
+      </div>
+
+      <!-- Custom / ad-hoc item entry -->
+      <div style="background:#fafbff;border:1.5px dashed #c0cfe0;border-radius:8px;padding:10px 14px;margin-bottom:14px;">
+        <div style="font-size:11px;font-weight:700;color:#7a8a9e;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;">
+          ✏️ Add Custom / Ad-Hoc Item
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <input type="text" id="customItemName" placeholder="Item name (auto-detects category)…"
+            oninput="autoDetectCustomCategory()"
+            style="flex:2;min-width:180px;padding:6px 10px;border:1.5px solid #dce3ec;border-radius:6px;font-size:13px;outline:none;color:#1a2332;">
+          <select id="customItemCategory"
+            style="padding:6px 8px;border:1.5px solid #dce3ec;border-radius:6px;font-size:13px;color:#1a2332;background:white;outline:none;">
+            <option value="Misc">Misc</option>
+            <option value="Labour">Labour</option>
+            <option value="Freight">Freight</option>
+            <option value="Solar">Solar</option>
+            <option value="Battery">Battery</option>
+            <option value="Inverter">Inverter</option>
+            <option value="Kit">Kit</option>
+            <option value="Other">Other</option>
+          </select>
+          <select id="customItemSupplier"
+            style="padding:6px 8px;border:1.5px solid #dce3ec;border-radius:6px;font-size:13px;color:#1a2332;background:white;outline:none;">
+            <!-- populated by JS -->
+          </select>
+          <input type="number" id="customItemCost" placeholder="Cost ex GST ($)" min="0" step="10"
+            style="width:130px;padding:6px 10px;border:1.5px solid #dce3ec;border-radius:6px;font-size:13px;text-align:right;outline:none;color:#1a2332;">
+          <input type="number" id="customItemQty" value="1" min="1" max="999" title="Qty"
+            style="width:58px;padding:6px 8px;border:1.5px solid #dce3ec;border-radius:6px;font-size:13px;text-align:center;outline:none;color:#1a2332;">
+          <button onclick="addCustomItem()" class="btn-add" style="white-space:nowrap;">+ Add Item</button>
+        </div>
+        <div id="customItemHint" style="font-size:11px;color:#9aa5b4;margin-top:5px;font-style:italic;min-height:16px;"></div>
       </div>
 
       <!-- Product lines table -->
@@ -801,6 +835,30 @@ const BATTERY_STC_TAPER_BANDS = [
 ];
 const BATTERY_STC_MAX_KWH = 50;  // STCs only claimable on first 50kWh
 
+// ── CUSTOM ITEM — keyword → category auto-detection ──
+// Words in item name are matched (case-insensitive) against these lists;
+// first matching category wins. User can always override the dropdown.
+const CUSTOM_CATEGORY_KEYWORDS = {
+  'Inverter': ['inverter', 'hybrid inverter', 'string inverter', 'microinverter',
+               'micro inverter', 'growatt', 'fronius', 'sungrow', 'solaredge',
+               'goodwe', 'solis', 'deye', 'enphase'],
+  'Battery':  ['battery', 'batt ', 'storage', 'powerwall', 'lifepo', 'lithium',
+               'bms', 'energy storage', 'battery module', 'battery pack'],
+  'Solar':    ['solar panel', 'panel', ' pv ', 'photovoltaic', 'mono panel',
+               'poly panel', 'bifacial', 'half-cell'],
+  'Labour':   ['labour', 'labor', 'install', 'commissioning', 'commission',
+               'wiring', 'electrical', 'electrician', 'service call', 'call out',
+               'site visit', 'repair', 'maintenance', 'scaffolding', 'scaffold'],
+  'Freight':  ['freight', 'shipping', 'delivery', 'transport', 'courier', 'postage'],
+  'Kit':      ['kit', 'bundle', 'package', 'system package', 'combo'],
+  'Misc':     ['cable', 'conduit', 'bracket', 'mounting', 'hardware', 'sundry',
+               'misc', 'accessory', 'accessories', 'meter', 'isolator', 'switch',
+               'circuit breaker', 'breaker', 'fuse', 'connector', 'fitting',
+               'pipe', 'junction box', 'enclosure', 'cable tray', 'rail', 'bolt',
+               'busbar', 'earth', 'earthing', 'surge', 'spd', 'mc4', 'dc cable',
+               'ac cable', 'rapid shutdown'],
+};
+
 // ═══════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════
@@ -839,6 +897,16 @@ document.addEventListener('DOMContentLoaded', () => {
   // Add default included products
   PRODUCTS.filter(p => p.defaultIncluded).forEach(p => {
     addProductById(p.id, p.suppliers[0]);
+  });
+
+  // Populate custom item supplier dropdown
+  const customSupSel = document.getElementById('customItemSupplier');
+  SUPPLIERS.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = s.name;
+    if (s.id === 'pi') opt.selected = true; // default to Pi Energy (internal)
+    customSupSel.appendChild(opt);
   });
 
   // Set STC alert
@@ -935,6 +1003,84 @@ function removeProduct(rowId) {
 }
 
 // ═══════════════════════════════════════════════════
+// CUSTOM / AD-HOC ITEM ENTRY
+// ═══════════════════════════════════════════════════
+
+// Auto-detect category from keywords in item name — fires on every keystroke
+function autoDetectCustomCategory() {
+  const raw   = document.getElementById('customItemName').value;
+  const lower = (' ' + raw.toLowerCase() + ' '); // pad with spaces for word-boundary matching
+  const hintEl  = document.getElementById('customItemHint');
+  const catSel  = document.getElementById('customItemCategory');
+
+  if (!raw.trim()) { hintEl.textContent = ''; return; }
+
+  for (const [cat, keywords] of Object.entries(CUSTOM_CATEGORY_KEYWORDS)) {
+    if (keywords.some(kw => lower.includes(kw.toLowerCase()))) {
+      catSel.value = cat;
+      hintEl.textContent = `💡 Category auto-detected as "${cat}" — change the dropdown above if needed`;
+      hintEl.style.color = '#1565c0';
+      return;
+    }
+  }
+  // No keyword match
+  hintEl.textContent = '📝 No category matched — please select one from the dropdown above';
+  hintEl.style.color = '#9aa5b4';
+}
+
+// "Add Item" button — validate & push custom line item, then clear form
+function addCustomItem() {
+  const nameEl = document.getElementById('customItemName');
+  const name   = nameEl.value.trim();
+
+  if (!name) {
+    nameEl.style.borderColor = '#e53935';
+    nameEl.focus();
+    setTimeout(() => { nameEl.style.borderColor = ''; }, 2500);
+    return;
+  }
+
+  const category   = document.getElementById('customItemCategory').value;
+  const supplierId = document.getElementById('customItemSupplier').value;
+  const cost       = parseFloat(document.getElementById('customItemCost').value) || 0;
+  const qty        = Math.max(1, parseInt(document.getElementById('customItemQty').value) || 1);
+
+  rowCounter++;
+  lineItems.push({
+    rowId: `row-${rowCounter}`,
+    productId: null,      // null = not from PRODUCTS catalogue
+    isCustom: true,
+    customName: name,
+    customCategory: category,
+    supplierId,
+    qty,
+    customCost: cost,
+  });
+
+  // Clear form for next entry
+  nameEl.value = '';
+  document.getElementById('customItemCost').value = '';
+  document.getElementById('customItemQty').value  = '1';
+  document.getElementById('customItemHint').textContent = '';
+  document.getElementById('customItemCategory').value = 'Misc';
+
+  renderTable();
+  recalculate();
+}
+
+// In-line editing for existing custom line items
+function updateCustomItem(rowId, field, val) {
+  const li = lineItems.find(l => l.rowId === rowId);
+  if (!li) return;
+  if      (field === 'qty')        li.qty        = Math.max(1, parseInt(val) || 1);
+  else if (field === 'customCost') li.customCost = parseFloat(val) || 0;
+  else                             li[field]     = val;
+  // Only re-render for changes that affect row structure (qty, category)
+  if (field === 'qty' || field === 'customCategory') renderTable();
+  recalculate();
+}
+
+// ═══════════════════════════════════════════════════
 // RENDER TABLE
 // ═══════════════════════════════════════════════════
 
@@ -1018,6 +1164,67 @@ function renderTable() {
   let hasBattery = false;
 
   lineItems.forEach(li => {
+    // ── Custom / ad-hoc item (not from catalogue) ──
+    if (li.isCustom) {
+      const catKey   = li.customCategory ? li.customCategory.toLowerCase() : 'other';
+      const catClass = `cat-${catKey}`;
+      const costEx   = li.customCost || 0;
+      const lineEx   = costEx * li.qty;
+      const lineInc  = lineEx * 1.10;
+      const allSupplierOpts = SUPPLIERS.map(s =>
+        `<option value="${s.id}" ${s.id === li.supplierId ? 'selected' : ''}>${s.name}</option>`
+      ).join('');
+
+      const tr = document.createElement('tr');
+      tr.id = li.rowId;
+      tr.innerHTML = `
+        <td>
+          <span class="prod-cat ${catClass}">${li.customCategory || 'Other'}</span>
+          <input type="text" value="${(li.customName || '').replace(/"/g, '&quot;')}"
+            placeholder="Item name…"
+            style="font-weight:600;color:#1a2332;border:none;background:transparent;font-size:13px;
+                   width:calc(100% - 90px);outline:none;border-bottom:1px dashed #dce3ec;"
+            oninput="updateCustomItem('${li.rowId}','customName',this.value)">
+          <div class="prod-specs" style="display:flex;align-items:center;gap:5px;margin-top:3px;">
+            <span style="color:#aaa;">Category:</span>
+            <select style="font-size:11px;border:1px solid #dce3ec;border-radius:3px;background:white;color:#5a6a7e;padding:1px 4px;cursor:pointer;"
+              onchange="updateCustomItem('${li.rowId}','customCategory',this.value)">
+              ${['Misc','Labour','Freight','Solar','Battery','Inverter','Kit','Other'].map(c =>
+                `<option value="${c}" ${c === li.customCategory ? 'selected' : ''}>${c}</option>`
+              ).join('')}
+            </select>
+            <span style="color:#c8d0dc;font-size:10px;font-style:italic;">custom item</span>
+          </div>
+        </td>
+        <td class="center">
+          <select class="supplier-select"
+            onchange="updateCustomItem('${li.rowId}','supplierId',this.value)">${allSupplierOpts}</select>
+        </td>
+        <td class="center">
+          <input class="qty-input" type="number" min="1" max="999" value="${li.qty}"
+            onchange="updateCustomItem('${li.rowId}','qty',this.value)">
+        </td>
+        <td>
+          <input class="cost-input" type="number" min="0" step="10" value="${costEx}"
+            oninput="updateCustomItem('${li.rowId}','customCost',this.value)"
+            title="Unit cost ex GST">
+        </td>
+        <td>
+          <span class="val-ex">$${costEx.toLocaleString('en-AU',{minimumFractionDigits:2})} × ${li.qty}</span>
+          <span class="val-inc">$${lineEx.toLocaleString('en-AU',{minimumFractionDigits:2})}</span>
+        </td>
+        <td>
+          <span class="val-inc">$${lineInc.toLocaleString('en-AU',{minimumFractionDigits:2})}</span>
+        </td>
+        <td class="center">
+          <button class="btn-remove" onclick="removeProduct('${li.rowId}')" title="Remove">×</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+      return; // skip catalogue product logic below
+    }
+
+    // ── Catalogue product ──
     const prod = PRODUCTS.find(p => p.id === li.productId);
     if (!prod) return;
     if (prod.category === 'Battery') hasBattery = true;
@@ -1508,6 +1715,13 @@ function recalculate() {
   SUPPLIERS.forEach(s => supplierTotals[s.id] = 0);
 
   lineItems.forEach(li => {
+    // Custom ad-hoc items
+    if (li.isCustom) {
+      const lineEx = (li.customCost || 0) * li.qty;
+      totalCostEx += lineEx;
+      if (supplierTotals[li.supplierId] !== undefined) supplierTotals[li.supplierId] += lineEx;
+      return;
+    }
     const prod = PRODUCTS.find(p => p.id === li.productId);
     if (!prod) return;
     // Solar panels use dynamic cost calc (includes solar labour + mounting); all others use costExGst or customCost
@@ -1623,6 +1837,13 @@ function updateSystemSummary() {
   // Group by category
   const groups = {};
   lineItems.forEach(li => {
+    // Custom items
+    if (li.isCustom) {
+      const cat = li.customCategory || 'Other';
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push({ prod: null, li });
+      return;
+    }
     const prod = PRODUCTS.find(p => p.id === li.productId);
     if (!prod) return;
     if (!groups[prod.category]) groups[prod.category] = [];
@@ -1633,8 +1854,9 @@ function updateSystemSummary() {
     items.forEach(({ prod, li }) => {
       const d = document.createElement('div');
       d.className = 'sup-row';
-      const sup = SUPPLIERS.find(s => s.id === li.supplierId);
-      d.innerHTML = `<span style="color:#5a6a7e;">${li.qty}× ${prod.name.replace('FoxESS ','')}</span><span style="color:#9aa5b4;font-size:11px;">${sup ? sup.name : ''}</span>`;
+      const sup  = SUPPLIERS.find(s => s.id === li.supplierId);
+      const name = li.isCustom ? (li.customName || 'Custom Item') : prod.name.replace('FoxESS ','');
+      d.innerHTML = `<span style="color:#5a6a7e;">${li.qty}× ${name}</span><span style="color:#9aa5b4;font-size:11px;">${sup ? sup.name : ''}</span>`;
       summaryEl.appendChild(d);
     });
   });
@@ -1812,6 +2034,25 @@ function generateQuoteHTML() {
   let totalCostEx = 0;
 
   lineItems.forEach(li => {
+    // ── Custom ad-hoc item ──
+    if (li.isCustom) {
+      const costEx = li.customCost || 0;
+      const lineEx = costEx * li.qty;
+      totalCostEx += lineEx;
+      const sup = SUPPLIERS.find(s => s.id === li.supplierId);
+      lineRows += `
+        <tr>
+          <td style="padding:9px 12px;border-bottom:1px solid #f0f4f8;">
+            <strong>${li.customName || 'Custom Item'}</strong>
+            <div style="font-size:11px;color:#9aa5b4;margin-top:2px;">Category: ${li.customCategory || 'Other'} · Custom item</div>
+            ${sup ? `<div style="font-size:10px;color:#b0bec5;margin-top:1px;">Supplier: ${sup.name}</div>` : ''}
+          </td>
+          <td style="padding:9px 12px;border-bottom:1px solid #f0f4f8;text-align:center;">${li.qty} unit${li.qty > 1 ? 's' : ''}</td>
+          <td style="padding:9px 12px;border-bottom:1px solid #f0f4f8;text-align:right;font-weight:600;">${fmt(lineEx)}</td>
+        </tr>`;
+      return;
+    }
+
     const prod = PRODUCTS.find(p => p.id === li.productId);
     if (!prod) return;
 
