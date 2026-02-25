@@ -406,10 +406,23 @@
     display: none;
   }
 
+  .btn-save {
+    background: #2e7d32;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 9px 22px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn-save:hover { background: #1b5e20; }
+
   @media print {
     body { background: white; padding: 10px; min-width: unset; }
     .panel { box-shadow: none; border: 1px solid #ddd; }
-    .btn-add, .btn-remove, .add-bar { display: none; }
+    .btn-add, .btn-remove, .add-bar, .btn-save { display: none; }
     .main-grid { grid-template-columns: 1fr 300px; }
   }
 </style>
@@ -552,6 +565,12 @@
           </div>
         </div>
 
+      </div>
+
+      <!-- Save quote button -->
+      <div style="margin-top:16px;padding-top:14px;border-top:2px solid #f0f4f8;display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:11px;color:#9aa5b4;">Saves to: Pi Ops\Customers\[Customer Name]\Pi Quote.html</span>
+        <button class="btn-save" onclick="saveQuote()">💾 Save Quote to Customer Folder</button>
       </div>
     </div>
   </div>
@@ -1592,6 +1611,280 @@ document.getElementById('stcZone').addEventListener('change', () => {
   stcOverridden = false;
   autoCalcStcs();
 });
+
+// ═══════════════════════════════════════════════════
+// SAVE QUOTE
+// ═══════════════════════════════════════════════════
+
+async function saveQuote() {
+  const customerName = document.getElementById('customerName').value.trim();
+  if (!customerName) {
+    alert('Please enter a customer name before saving the quote.');
+    document.getElementById('customerName').focus();
+    return;
+  }
+
+  const quoteHtml = generateQuoteHTML();
+  const saveBtn = document.querySelector('.btn-save');
+
+  try {
+    if ('showDirectoryPicker' in window) {
+      // File System Access API — user picks the Customers folder, tool creates subfolder + file
+      const dirHandle = await window.showDirectoryPicker({
+        id: 'pi-customers',   // Chrome remembers this location between sessions
+        startIn: 'desktop',
+        mode: 'readwrite',
+      });
+      // Create customer subfolder (First Last)
+      const customerDir = await dirHandle.getDirectoryHandle(customerName, { create: true });
+      // Write Pi Quote.html
+      const fileHandle = await customerDir.getFileHandle('Pi Quote.html', { create: true });
+      const writable = await fileHandle.createWritable();
+      await writable.write(quoteHtml);
+      await writable.close();
+
+      const original = saveBtn.textContent;
+      saveBtn.textContent = '✅ Saved!';
+      saveBtn.style.background = '#1b5e20';
+      setTimeout(() => { saveBtn.textContent = original; saveBtn.style.background = ''; }, 3000);
+    } else {
+      // Fallback: standard browser download
+      const blob = new Blob([quoteHtml], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Pi Quote - ${customerName}.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      console.error('Save failed:', err);
+      alert('Could not save quote: ' + err.message);
+    }
+  }
+}
+
+function generateQuoteHTML() {
+  const fmt = (n) => '$' + n.toLocaleString('en-AU', {minimumFractionDigits:2, maximumFractionDigits:2});
+  const customerName = document.getElementById('customerName').value.trim() || 'Unknown Customer';
+  const quoteRef     = document.getElementById('quoteRef').value.trim() || '—';
+  const quoteDate    = document.getElementById('quoteDate').value || new Date().toISOString().split('T')[0];
+  const marginPct    = parseFloat(document.getElementById('marginPct').value) || 0;
+
+  // ── Build line item rows ──
+  let lineRows = '';
+  let totalCostEx = 0;
+
+  lineItems.forEach(li => {
+    const prod = PRODUCTS.find(p => p.id === li.productId);
+    if (!prod) return;
+
+    let lineEx, unitDesc, subRows = '';
+
+    if (prod.isSolarPanel) {
+      const calc = solarPanelCalc(li);
+      const mc   = mountingCalc(li);
+      lineEx     = solarLineTotalEx(li);
+      unitDesc   = `${li.panelW}W panel`;
+
+      subRows += `
+        <tr style="background:#f5faf5;">
+          <td style="padding:3px 10px 3px 30px;color:#558b2f;font-size:11px;" colspan="2">
+            ☀️ Panels — ${li.qty} × ${li.panelW}W = ${calc.systemKw.toFixed(2)}kW</td>
+          <td style="padding:3px 10px;text-align:right;color:#558b2f;font-size:11px;">${fmt(calc.lineEx)}</td>
+        </tr>
+        <tr style="background:#f5faf5;">
+          <td style="padding:3px 10px 3px 30px;color:#33691e;font-size:11px;" colspan="2">
+            🔧 Solar Labour — ${calc.systemKw.toFixed(2)}kW × ${li.labourCpw !== undefined ? li.labourCpw : 30}c/W</td>
+          <td style="padding:3px 10px;text-align:right;color:#33691e;font-size:11px;">${fmt(calc.labourEx)}</td>
+        </tr>`;
+
+      if (mc.tileCost > 0) subRows += `
+        <tr style="background:#f5faf5;">
+          <td style="padding:3px 10px 3px 30px;color:#5d4037;font-size:11px;" colspan="2">
+            🏗️ Tile Mounting — ${mc.tileUnits} unit${mc.tileUnits > 1 ? 's' : ''} × $127.50</td>
+          <td style="padding:3px 10px;text-align:right;color:#5d4037;font-size:11px;">${fmt(mc.tileCost)}</td>
+        </tr>`;
+
+      if (mc.tiltBaseCost + mc.tiltFootCost + mc.tiltExtraCost > 0) subRows += `
+        <tr style="background:#f5faf5;">
+          <td style="padding:3px 10px 3px 30px;color:#37474f;font-size:11px;" colspan="2">
+            🏗️ Tilt Mounting — ${mc.tiltUnits} unit${mc.tiltUnits > 1 ? 's' : ''} × $89.90
+            ${mc.tiltFootCost > 0 ? ` + ${parseInt(li.tiltExtraFeet)} feet × $9.90` : ''}
+            ${mc.tiltExtraCost > 0 ? ` + $${li.tiltExtraRate || 15}/panel × ${mc.tiltPanelsUsed} panels` : ''}</td>
+          <td style="padding:3px 10px;text-align:right;color:#37474f;font-size:11px;">${fmt(mc.tiltBaseCost + mc.tiltFootCost + mc.tiltExtraCost)}</td>
+        </tr>`;
+    } else {
+      const costEx = li.customCost !== null ? li.customCost : prod.costExGst;
+      lineEx       = costEx * li.qty;
+      unitDesc     = prod.unit;
+    }
+
+    totalCostEx += lineEx;
+    const sup = SUPPLIERS.find(s => s.id === li.supplierId);
+
+    lineRows += `
+      <tr>
+        <td style="padding:9px 12px;border-bottom:1px solid #f0f4f8;">
+          <strong>${prod.name}</strong>
+          <div style="font-size:11px;color:#9aa5b4;margin-top:2px;">${prod.specs}</div>
+          ${sup ? `<div style="font-size:10px;color:#b0bec5;margin-top:1px;">Supplier: ${sup.name}</div>` : ''}
+        </td>
+        <td style="padding:9px 12px;border-bottom:1px solid #f0f4f8;text-align:center;">${li.qty} ${unitDesc}</td>
+        <td style="padding:9px 12px;border-bottom:1px solid #f0f4f8;text-align:right;font-weight:600;">${fmt(lineEx)}</td>
+      </tr>${subRows}`;
+  });
+
+  // ── Summary calcs ──
+  const marginAmt   = totalCostEx * (marginPct / 100);
+  const sellPriceEx = totalCostEx + marginAmt;
+  const gstAmt      = sellPriceEx * 0.10;
+  const grossInc    = sellPriceEx * 1.10;
+
+  const stcData = getBatterySolarStcs();
+  const { inverterStcs, batteryStcs, solarKwForStc, batteryKwhTotal,
+          demYears, zoneFactor, batteryFactor, year } = stcData;
+  const hasSolar   = solarKwForStc > 0;
+  const hasBattery = batteryKwhTotal > 0;
+  const solarRate   = parseFloat(document.getElementById('stcRate').value) || 0;
+  const batteryRate = parseFloat(document.getElementById('batteryStcRate').value) || 0;
+
+  let stcRebate = 0, stcLabel = '';
+  if (stcOverridden && hasSolar) {
+    const cnt = parseInt(document.getElementById('stcCount').value) || 0;
+    stcRebate = cnt * solarRate;
+    stcLabel  = `${cnt} STCs × $${solarRate.toFixed(0)} (manually overridden)`;
+  } else {
+    stcRebate = (inverterStcs * solarRate) + (batteryStcs * batteryRate);
+    if (hasSolar && hasBattery)
+      stcLabel = `☀️ ${inverterStcs} × $${solarRate.toFixed(0)} + 🔋 ${batteryStcs} × $${batteryRate.toFixed(0)}`;
+    else if (hasSolar)
+      stcLabel = `${inverterStcs} solar STCs × $${solarRate.toFixed(0)}`;
+    else if (hasBattery)
+      stcLabel = `${batteryStcs} battery STCs × $${batteryRate.toFixed(0)} (govt rate)`;
+  }
+  const oop = Math.max(0, grossInc - stcRebate);
+
+  // ── Assemble HTML ──
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Pi Quote – ${customerName}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a2332; padding: 32px; max-width: 920px; margin: 0 auto; }
+  .hdr { background: linear-gradient(135deg, #0a2d4e 0%, #1565c0 100%); color: white; padding: 22px 28px; border-radius: 10px; margin-bottom: 22px; display: flex; justify-content: space-between; align-items: center; }
+  .hdr h1 { font-size: 20px; font-weight: 700; }
+  .hdr .sub { font-size: 11px; opacity: 0.75; margin-top: 3px; }
+  .hdr .stamp { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; padding: 8px 18px; text-align: center; font-size: 12px; }
+  .hdr .stamp strong { display: block; font-size: 20px; margin-top: 2px; }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+  .info-box { background: #f5f8fc; border-radius: 8px; padding: 14px 16px; }
+  .info-box h3 { font-size: 10px; font-weight: 700; color: #7a8a9e; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .info-row { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; }
+  .info-row .lbl { color: #7a8a9e; }
+  .info-row .val { font-weight: 600; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 6px rgba(0,0,0,0.07); }
+  thead th { background: #0a2d4e; color: white; padding: 10px 12px; font-size: 12px; font-weight: 600; text-align: left; }
+  thead th:not(:first-child) { text-align: right; }
+  tfoot td { background: #f0f4f8; font-weight: 700; padding: 10px 12px; }
+  tfoot td:last-child { text-align: right; }
+  .sum-box { background: #f5f8fc; border-radius: 8px; padding: 16px 20px; margin-bottom: 14px; }
+  .sum-box h3 { font-size: 10px; font-weight: 700; color: #7a8a9e; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+  .srow { display: flex; justify-content: space-between; font-size: 13px; padding: 5px 0; border-bottom: 1px solid #eaeef3; }
+  .srow:last-child { border-bottom: none; }
+  .srow .lbl { color: #5a6a7e; }
+  .srow .val { font-weight: 600; }
+  .oop-bar { background: #0a2d4e; color: white; border-radius: 8px; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .oop-bar .lbl { font-size: 14px; font-weight: 600; opacity: 0.85; }
+  .oop-bar .val { font-size: 28px; font-weight: 800; color: #4fc3f7; }
+  .stc-note { background: #fff8e1; border: 1px solid #ffc107; border-radius: 6px; padding: 10px 14px; font-size: 12px; color: #5a4000; margin-bottom: 16px; }
+  .footer { font-size: 11px; color: #b0bac5; text-align: center; border-top: 1px solid #eee; padding-top: 14px; margin-top: 8px; }
+  @media print { body { padding: 12px; } }
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div>
+    <h1>Pi Energy Systems — System Quote</h1>
+    <div class="sub">Internal pricing document &nbsp;·&nbsp; All figures ex GST unless otherwise stated</div>
+  </div>
+  <div class="stamp">
+    <span>Quote Date</span>
+    <strong>${quoteDate}</strong>
+  </div>
+</div>
+
+<div class="info-grid">
+  <div class="info-box">
+    <h3>Customer Details</h3>
+    <div class="info-row"><span class="lbl">Customer</span><span class="val">${customerName}</span></div>
+    <div class="info-row"><span class="lbl">Quote Reference</span><span class="val">${quoteRef}</span></div>
+    <div class="info-row"><span class="lbl">Date</span><span class="val">${quoteDate}</span></div>
+  </div>
+  <div class="info-box">
+    <h3>Pricing Parameters</h3>
+    <div class="info-row"><span class="lbl">Margin applied</span><span class="val">${marginPct}%</span></div>
+    <div class="info-row"><span class="lbl">GST</span><span class="val">10% (applied before STC deduction)</span></div>
+    <div class="info-row"><span class="lbl">Total STCs</span><span class="val">${inverterStcs + batteryStcs} certificates</span></div>
+  </div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th style="width:55%">Product / Description</th>
+      <th style="width:15%;text-align:center;">Qty</th>
+      <th style="width:30%;text-align:right;">Line Total (ex GST)</th>
+    </tr>
+  </thead>
+  <tbody>${lineRows}</tbody>
+  <tfoot>
+    <tr>
+      <td colspan="2">Total Cost (ex GST)</td>
+      <td style="text-align:right;">${fmt(totalCostEx)}</td>
+    </tr>
+  </tfoot>
+</table>
+
+<div class="sum-box">
+  <h3>💰 Pricing Calculation</h3>
+  <div class="srow"><span class="lbl">Total cost ex GST</span><span class="val">${fmt(totalCostEx)}</span></div>
+  <div class="srow"><span class="lbl">Margin (${marginPct}%)</span><span class="val" style="color:#1565c0;">${fmt(marginAmt)}</span></div>
+  <div class="srow"><span class="lbl">Sell price ex GST</span><span class="val">${fmt(sellPriceEx)}</span></div>
+  <div class="srow"><span class="lbl">GST (10%)</span><span class="val" style="color:#1565c0;">${fmt(gstAmt)}</span></div>
+  <div class="srow"><span class="lbl">Gross inc GST</span><span class="val">${fmt(grossInc)}</span></div>
+  <div class="srow">
+    <span class="lbl">Less STC rebate (GST exempt)<br>
+      <small style="color:#e57373;font-size:11px;">${stcLabel}</small></span>
+    <span class="val" style="color:#c62828;">−${fmt(stcRebate)}</span>
+  </div>
+</div>
+
+<div class="oop-bar">
+  <span class="lbl">Customer Out-of-Pocket (inc GST)</span>
+  <span class="val">${fmt(oop)}</span>
+</div>
+
+${(hasSolar || hasBattery) ? `
+<div class="stc-note">
+  <strong>STC Calculation Detail:</strong><br>
+  ${hasSolar ? `☀️ Solar: ${solarKwForStc.toFixed(2)}kW × zone factor (${zoneFactor}) × ${demYears} deeming years = <strong>${inverterStcs} STCs</strong> @ $${solarRate.toFixed(0)}/STC. ` : ''}
+  ${hasBattery ? `🔋 Battery: ${batteryKwhTotal.toFixed(2)}kWh × ${batteryFactor} (${year} CER flat rate, no zone) = <strong>${batteryStcs} STCs</strong> @ $${batteryRate.toFixed(0)}/STC (govt clearing house).` : ''}
+</div>` : ''}
+
+<div class="footer">
+  Generated by Pi Energy Systems Configuration Tool &nbsp;·&nbsp; ${new Date().toLocaleString('en-AU')} &nbsp;·&nbsp; Internal use only
+</div>
+
+</body>
+</html>`;
+}
 
 </script>
 </body>
