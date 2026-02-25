@@ -874,11 +874,18 @@ function addProductById(productId, supplierId) {
   };
   // Solar panel extra state
   if (prod.isSolarPanel) {
-    li.panelW      = 400;        // default panel wattage
-    li.priceMode   = 'cpw';      // 'cpw' = cents per watt | 'panel' = price per panel
-    li.cpw         = 35;         // default cents per watt
-    li.panelPrice  = 140;        // default price per panel ($)
-    li.labourCpw   = 30;         // default solar labour rate: 30 c/W ($0.30/W)
+    li.panelW         = 400;     // default panel wattage
+    li.priceMode      = 'cpw';   // 'cpw' = cents per watt | 'panel' = price per panel
+    li.cpw            = 35;      // default cents per watt
+    li.panelPrice     = 140;     // default price per panel ($)
+    li.labourCpw      = 30;      // default solar labour rate: 30 c/W ($0.30/W)
+    // Mounting hardware
+    li.mountTile      = false;   // tile roof mounting enabled
+    li.tilePanels     = null;    // panels on tile — null = auto (use total qty)
+    li.mountTilt      = false;   // tilt mount (tin roof) enabled
+    li.tiltPanels     = null;    // panels on tilt — null = auto (use total qty)
+    li.tiltExtraFeet  = 0;       // extra tilt feet count
+    li.tiltExtraRate  = 15;      // extra per-panel rate for tilt ($, default $15)
   }
   lineItems.push(li);
 
@@ -922,6 +929,45 @@ function solarPanelCalc(li) {
   return { costPerPanel, lineEx, labourEx, totalLineEx, systemKw };
 }
 
+// ── MOUNTING HARDWARE COST HELPER ──
+// Tile roof:  1 unit per 6 panels × $127.50/unit
+// Tilt mount: 1 unit per 6 panels × $89.90/unit + extra feet × $9.90 + extra per-panel rate
+// tilePanels / tiltPanels: null = use total panel qty; otherwise use entered value
+function mountingCalc(li) {
+  const totalPanels = parseInt(li.qty) || 0;
+
+  let tileUnits = 0, tileCost = 0, tilePanelsUsed = 0;
+  let tiltUnits = 0, tiltBaseCost = 0, tiltFootCost = 0, tiltExtraCost = 0, tiltPanelsUsed = 0;
+
+  if (li.mountTile) {
+    tilePanelsUsed = (li.tilePanels !== null && li.tilePanels !== undefined && li.tilePanels !== '')
+      ? (parseInt(li.tilePanels) || 0) : totalPanels;
+    tileUnits = Math.ceil(tilePanelsUsed / 6);
+    tileCost  = tileUnits * 127.50;
+  }
+
+  if (li.mountTilt) {
+    tiltPanelsUsed = (li.tiltPanels !== null && li.tiltPanels !== undefined && li.tiltPanels !== '')
+      ? (parseInt(li.tiltPanels) || 0) : totalPanels;
+    tiltUnits    = Math.ceil(tiltPanelsUsed / 6);
+    tiltBaseCost = tiltUnits * 89.90;
+    const extraFeet = parseInt(li.tiltExtraFeet) || 0;
+    tiltFootCost    = extraFeet * 9.90;
+    const extraRate = (li.tiltExtraRate !== undefined && li.tiltExtraRate !== null)
+      ? (parseFloat(li.tiltExtraRate) || 0) : 15;
+    tiltExtraCost   = tiltPanelsUsed * extraRate;
+  }
+
+  const totalMountingCost = tileCost + tiltBaseCost + tiltFootCost + tiltExtraCost;
+  return { tileUnits, tileCost, tilePanelsUsed, tiltUnits, tiltBaseCost, tiltFootCost,
+           tiltExtraCost, tiltPanelsUsed, totalMountingCost };
+}
+
+// Full solar line total: panels + solar labour + mounting
+function solarLineTotalEx(li) {
+  return solarPanelCalc(li).totalLineEx + mountingCalc(li).totalMountingCost;
+}
+
 function renderTable() {
   const tbody = document.getElementById('productLines');
   tbody.innerHTML = '';
@@ -945,7 +991,7 @@ function renderTable() {
     if (prod.isSolarPanel) {
       const calc = solarPanelCalc(li);
       costEx  = calc.costPerPanel;
-      lineEx  = calc.totalLineEx;   // includes solar labour
+      lineEx  = solarLineTotalEx(li);   // panels + solar labour + mounting
       lineInc = lineEx * 1.10;
       specExtra = `${li.panelW}W × ${li.qty} panels = ${calc.systemKw.toFixed(2)}kW`;
     } else {
@@ -990,7 +1036,7 @@ function renderTable() {
       <td>${costCell}</td>
       <td>
         ${prod.isSolarPanel
-          ? `<span class="val-ex" style="color:#2e7d32;">panels + labour</span>
+          ? `<span class="val-ex" style="color:#2e7d32;">panels + labour + mounting</span>
              <span class="val-inc" style="color:#2e7d32;">$${lineEx.toLocaleString('en-AU', {minimumFractionDigits:2})}</span>`
           : `<span class="val-ex">$${costEx.toLocaleString('en-AU', {minimumFractionDigits:2})} × ${li.qty}</span>
              <span class="val-inc">$${lineEx.toLocaleString('en-AU', {minimumFractionDigits:2})}</span>`
@@ -1009,8 +1055,9 @@ function renderTable() {
     if (prod.isSolarPanel) {
       const cpwChecked    = li.priceMode === 'cpw'   ? 'selected' : '';
       const panelChecked  = li.priceMode === 'panel' ? 'selected' : '';
-      const calc = solarPanelCalc(li);
-      const labourCpwVal  = li.labourCpw !== undefined ? li.labourCpw : 30;
+      const calc         = solarPanelCalc(li);
+      const mc           = mountingCalc(li);
+      const labourCpwVal = li.labourCpw !== undefined ? li.labourCpw : 30;
 
       // ── Row 1: Panel hardware config ──
       const trSolar = document.createElement('tr');
@@ -1085,6 +1132,76 @@ function renderTable() {
         </td>
       `;
       tbody.appendChild(trLabour);
+
+      // ── Row 3: Mounting hardware ──
+      const trMount = document.createElement('tr');
+      trMount.style.background = '#eceff1';
+      trMount.style.borderBottom = '2px solid #b0bec5';
+
+      const tileExtraRate = li.tiltExtraRate !== undefined ? li.tiltExtraRate : 15;
+      const tilePanelVal  = li.tilePanels !== null && li.tilePanels !== undefined ? li.tilePanels : li.qty;
+      const tiltPanelVal  = li.tiltPanels !== null && li.tiltPanels !== undefined ? li.tiltPanels : li.qty;
+
+      trMount.innerHTML = `
+        <td colspan="7" style="padding:6px 12px 10px 28px;">
+          <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;font-size:13px;">
+            <span style="color:#37474f;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:0.4px;min-width:80px;padding-top:6px;">🏗️ Mounting</span>
+
+            <!-- TILE ROOF -->
+            <div style="border:1px solid #bcaaa4;border-radius:7px;padding:8px 12px;background:#efebe9;min-width:220px;">
+              <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-weight:700;color:#4e342e;font-size:12px;">
+                <input type="checkbox" ${li.mountTile ? 'checked' : ''}
+                  onchange="updateSolarMounting('${li.rowId}','mountTile',this.checked)">
+                Tile Roof
+                <span style="font-weight:400;color:#795548;font-size:11px;">$127.50/unit · 1 per 6 panels</span>
+              </label>
+              ${li.mountTile ? `
+              <div style="display:flex;align-items:center;gap:7px;margin-top:6px;padding-left:20px;flex-wrap:wrap;font-size:12px;">
+                <label style="color:#5d4037;">Panels on tile:</label>
+                <input type="number" min="0" max="${li.qty}" step="1" value="${tilePanelVal}"
+                  style="width:58px;padding:3px 6px;border:1.5px solid #bcaaa4;border-radius:4px;font-size:12px;text-align:right;background:white;"
+                  onchange="updateSolarMounting('${li.rowId}','tilePanels',this.value)">
+                <span style="color:#5d4037;">→ ${mc.tileUnits} units = <strong style="color:#4e342e;">$${mc.tileCost.toFixed(2)}</strong></span>
+              </div>` : ''}
+            </div>
+
+            <!-- TILT MOUNT -->
+            <div style="border:1px solid #90a4ae;border-radius:7px;padding:8px 12px;background:#e3f2fd;min-width:260px;">
+              <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-weight:700;color:#263238;font-size:12px;">
+                <input type="checkbox" ${li.mountTilt ? 'checked' : ''}
+                  onchange="updateSolarMounting('${li.rowId}','mountTilt',this.checked)">
+                Tilt Mount (Tin)
+                <span style="font-weight:400;color:#546e7a;font-size:11px;">$89.90/unit · 1 per 6 panels</span>
+              </label>
+              ${li.mountTilt ? `
+              <div style="display:flex;align-items:center;gap:7px;margin-top:6px;padding-left:20px;flex-wrap:wrap;font-size:12px;">
+                <label style="color:#37474f;">Panels on tilt:</label>
+                <input type="number" min="0" max="${li.qty}" step="1" value="${tiltPanelVal}"
+                  style="width:58px;padding:3px 6px;border:1.5px solid #90a4ae;border-radius:4px;font-size:12px;text-align:right;background:white;"
+                  onchange="updateSolarMounting('${li.rowId}','tiltPanels',this.value)">
+                <span style="color:#37474f;">→ ${mc.tiltUnits} units = <strong>$${mc.tiltBaseCost.toFixed(2)}</strong></span>
+              </div>
+              <div style="display:flex;align-items:center;gap:7px;margin-top:4px;padding-left:20px;flex-wrap:wrap;font-size:12px;">
+                <label style="color:#37474f;">Extra feet:</label>
+                <input type="number" min="0" step="1" value="${li.tiltExtraFeet || 0}"
+                  style="width:52px;padding:3px 6px;border:1.5px solid #90a4ae;border-radius:4px;font-size:12px;text-align:right;background:white;"
+                  onchange="updateSolarMounting('${li.rowId}','tiltExtraFeet',this.value)">
+                <span style="color:#37474f;">× $9.90 = <strong>$${mc.tiltFootCost.toFixed(2)}</strong></span>
+                <span style="margin-left:6px;color:#37474f;">Extra $/panel:</span>
+                <input type="number" min="0" step="0.5" value="${tileExtraRate}"
+                  style="width:60px;padding:3px 6px;border:1.5px solid #90a4ae;border-radius:4px;font-size:12px;text-align:right;background:white;"
+                  onchange="updateSolarMounting('${li.rowId}','tiltExtraRate',this.value)">
+                <span style="color:#37474f;">× ${mc.tiltPanelsUsed} panels = <strong>$${mc.tiltExtraCost.toFixed(2)}</strong></span>
+              </div>` : ''}
+            </div>
+
+            <div style="margin-left:auto;font-size:13px;color:#263238;font-weight:700;padding-top:6px;white-space:nowrap;">
+              Mounting ex GST: <span style="color:${mc.totalMountingCost > 0 ? '#1a237e' : '#aaa'};">$${mc.totalMountingCost.toFixed(2)}</span>
+            </div>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(trMount);
     }
   });
 
@@ -1128,6 +1245,27 @@ function updateSolarPanel(rowId, field, val) {
   renderTable();
   stcOverridden = false;
   autoCalcStcs();
+  recalculate();
+}
+
+function updateSolarMounting(rowId, field, val) {
+  const li = lineItems.find(l => l.rowId === rowId);
+  if (!li) return;
+  if (field === 'mountTile' || field === 'mountTilt') {
+    li[field] = !!val;
+    // When toggling off, reset the panel count so it auto-fills next time it's enabled
+    if (!val) {
+      if (field === 'mountTile') li.tilePanels = null;
+      if (field === 'mountTilt') { li.tiltPanels = null; li.tiltExtraFeet = 0; }
+    }
+  } else if (field === 'tilePanels' || field === 'tiltPanels') {
+    li[field] = val === '' ? null : (parseInt(val) || 0);
+  } else if (field === 'tiltExtraFeet') {
+    li[field] = parseInt(val) || 0;
+  } else if (field === 'tiltExtraRate') {
+    li[field] = parseFloat(val) || 0;
+  }
+  renderTable();
   recalculate();
 }
 
@@ -1308,10 +1446,10 @@ function recalculate() {
   lineItems.forEach(li => {
     const prod = PRODUCTS.find(p => p.id === li.productId);
     if (!prod) return;
-    // Solar panels use dynamic cost calc (includes solar labour); all others use costExGst or customCost
+    // Solar panels use dynamic cost calc (includes solar labour + mounting); all others use costExGst or customCost
     let lineEx;
     if (prod.isSolarPanel) {
-      lineEx = solarPanelCalc(li).totalLineEx;  // panels + solar labour combined
+      lineEx = solarLineTotalEx(li);  // panels + solar labour + mounting combined
     } else {
       const costEx = li.customCost !== null ? li.customCost : prod.costExGst;
       lineEx = costEx * li.qty;
