@@ -463,8 +463,17 @@
       <!-- Quote info -->
       <div class="quote-row">
         <div class="field-group">
-          <label>Quote Reference / System Name</label>
-          <input type="text" id="quoteRef" placeholder="e.g. Smith residence – 10kW+Battery" oninput="recalculate()">
+          <label>Quote Reference
+            <button onclick="getNextQuoteNumber()" title="Scan Customer folder for next sequential quote number"
+              style="margin-left:6px;font-size:10px;font-weight:700;padding:1px 7px;border-radius:4px;cursor:pointer;border:1.5px solid #1565c0;background:white;color:#1565c0;vertical-align:middle;">
+              # Auto
+            </button>
+            <button onclick="renumberAllQuotes()" title="Renumber all existing Pi Quote files sequentially from 1000001"
+              style="margin-left:3px;font-size:10px;font-weight:700;padding:1px 7px;border-radius:4px;cursor:pointer;border:1.5px solid #e65100;background:white;color:#e65100;vertical-align:middle;">
+              Renumber All
+            </button>
+          </label>
+          <input type="text" id="quoteRef" placeholder="Click # Auto to generate…" oninput="recalculate()">
         </div>
         <div class="field-group">
           <label>Customer</label>
@@ -549,14 +558,18 @@
           </div>
           <div class="stc-calc-note" id="stcCalcNote">Add products to calculate</div>
 
-          <!-- Rate row — solar uses editable spot rate; battery uses fixed govt rate -->
-          <div class="ctrl-row" style="margin-top:6px;" id="solarRateRow" style="display:none;">
-            <label>Solar STC rate ($)</label>
-            <input type="number" id="stcRate" value="38" min="0" step="0.5" oninput="recalculate()">
-          </div>
-          <div class="ctrl-row" id="batteryRateRow" style="display:none;">
-            <label>Battery STC rate ($) <span style="font-size:10px;color:#aaa;">govt fixed</span></label>
-            <input type="number" id="batteryStcRate" value="40" min="0" step="0.5" oninput="recalculate()" style="background:#f5f8fc;">
+          <!-- Single unified STC rate -->
+          <div class="ctrl-row" style="margin-top:6px;" id="stcRateRow">
+            <label>STC rate ($)</label>
+            <div style="display:flex;align-items:center;gap:4px;">
+              <button onclick="setStcRate(38)" id="stcBtn38"
+                style="padding:3px 7px;font-size:11px;font-weight:700;border-radius:4px;cursor:pointer;border:1.5px solid #1565c0;background:#1565c0;color:white;">$38</button>
+              <button onclick="setStcRate(40)" id="stcBtn40"
+                style="padding:3px 7px;font-size:11px;font-weight:700;border-radius:4px;cursor:pointer;border:1.5px solid #dce3ec;background:white;color:#5a6a7e;">$40</button>
+              <input type="number" id="stcRate" value="38" min="0" step="0.5"
+                style="width:62px;padding:4px 6px;border:1.5px solid #dce3ec;border-radius:5px;font-size:13px;text-align:right;outline:none;"
+                oninput="onStcRateInput()">
+            </div>
           </div>
 
           <div class="ctrl-row">
@@ -903,7 +916,7 @@ function addProductById(productId, supplierId) {
     li.tilePanels     = null;    // panels on tile — null = auto (use total qty)
     li.mountTilt      = false;   // tilt mount (tin roof) enabled
     li.tiltPanels     = null;    // panels on tilt — null = auto (use total qty)
-    li.tiltExtraFeet  = 0;       // extra tilt feet count
+    // legs = panels_on_tilt + 1 (auto-calculated, no manual input)
     li.tiltExtraRate  = 15;      // extra per-panel rate for tilt ($, default $15)
   }
   lineItems.push(li);
@@ -950,13 +963,16 @@ function solarPanelCalc(li) {
 
 // ── MOUNTING HARDWARE COST HELPER ──
 // Tile roof:  1 unit per 6 panels × $127.50/unit
-// Tilt mount: 1 unit per 6 panels × $89.90/unit + extra feet × $9.90 + extra per-panel rate
+// Tilt mount: 1 unit per 6 panels × $89.90/unit
+//             + legs (panels_on_tilt + 1) × $9.90/leg  [auto-calculated]
+//             + extra per-panel rate
 // tilePanels / tiltPanels: null = use total panel qty; otherwise use entered value
 function mountingCalc(li) {
   const totalPanels = parseInt(li.qty) || 0;
 
   let tileUnits = 0, tileCost = 0, tilePanelsUsed = 0;
-  let tiltUnits = 0, tiltBaseCost = 0, tiltFootCost = 0, tiltExtraCost = 0, tiltPanelsUsed = 0;
+  let tiltUnits = 0, tiltBaseCost = 0, tiltLegCount = 0, tiltLegCost = 0,
+      tiltExtraCost = 0, tiltPanelsUsed = 0;
 
   if (li.mountTile) {
     tilePanelsUsed = (li.tilePanels !== null && li.tilePanels !== undefined && li.tilePanels !== '')
@@ -970,16 +986,17 @@ function mountingCalc(li) {
       ? (parseInt(li.tiltPanels) || 0) : totalPanels;
     tiltUnits    = Math.ceil(tiltPanelsUsed / 6);
     tiltBaseCost = tiltUnits * 89.90;
-    const extraFeet = parseInt(li.tiltExtraFeet) || 0;
-    tiltFootCost    = extraFeet * 9.90;
+    // Legs = panels on tilt + 1 (one leg per panel plus one extra at end)
+    tiltLegCount = tiltPanelsUsed + 1;
+    tiltLegCost  = tiltLegCount * 9.90;
     const extraRate = (li.tiltExtraRate !== undefined && li.tiltExtraRate !== null)
       ? (parseFloat(li.tiltExtraRate) || 0) : 15;
-    tiltExtraCost   = tiltPanelsUsed * extraRate;
+    tiltExtraCost = tiltPanelsUsed * extraRate;
   }
 
-  const totalMountingCost = tileCost + tiltBaseCost + tiltFootCost + tiltExtraCost;
-  return { tileUnits, tileCost, tilePanelsUsed, tiltUnits, tiltBaseCost, tiltFootCost,
-           tiltExtraCost, tiltPanelsUsed, totalMountingCost };
+  const totalMountingCost = tileCost + tiltBaseCost + tiltLegCost + tiltExtraCost;
+  return { tileUnits, tileCost, tilePanelsUsed, tiltUnits, tiltBaseCost,
+           tiltLegCount, tiltLegCost, tiltExtraCost, tiltPanelsUsed, totalMountingCost };
 }
 
 // Full solar line total: panels + solar labour + mounting
@@ -1157,7 +1174,7 @@ function renderTable() {
       trMount.style.background = '#eceff1';
       trMount.style.borderBottom = '2px solid #b0bec5';
 
-      const tileExtraRate = li.tiltExtraRate !== undefined ? li.tiltExtraRate : 15;
+      const tiltExtraRate = li.tiltExtraRate !== undefined ? li.tiltExtraRate : 15;
       const tilePanelVal  = li.tilePanels !== null && li.tilePanels !== undefined ? li.tilePanels : li.qty;
       const tiltPanelVal  = li.tiltPanels !== null && li.tiltPanels !== undefined ? li.tiltPanels : li.qty;
 
@@ -1201,13 +1218,14 @@ function renderTable() {
                 <span style="color:#37474f;">→ ${mc.tiltUnits} units = <strong>$${mc.tiltBaseCost.toFixed(2)}</strong></span>
               </div>
               <div style="display:flex;align-items:center;gap:7px;margin-top:4px;padding-left:20px;flex-wrap:wrap;font-size:12px;">
-                <label style="color:#37474f;">Extra feet:</label>
-                <input type="number" min="0" step="1" value="${li.tiltExtraFeet || 0}"
-                  style="width:52px;padding:3px 6px;border:1.5px solid #90a4ae;border-radius:4px;font-size:12px;text-align:right;background:white;"
-                  oninput="updateSolarMounting('${li.rowId}','tiltExtraFeet',this.value)">
-                <span style="color:#37474f;">× $9.90 = <strong>$${mc.tiltFootCost.toFixed(2)}</strong></span>
+                <label style="color:#37474f;">Legs (auto):</label>
+                <span style="background:#eceff1;border:1px solid #b0bec5;border-radius:4px;padding:3px 8px;font-size:12px;color:#37474f;">
+                  <strong>${mc.tiltLegCount}</strong>
+                  <span style="color:#90a4ae;font-size:11px;">(${mc.tiltPanelsUsed} panels + 1)</span>
+                </span>
+                <span style="color:#37474f;">× $9.90 = <strong>$${mc.tiltLegCost.toFixed(2)}</strong></span>
                 <span style="margin-left:6px;color:#37474f;">Extra $/panel:</span>
-                <input type="number" min="0" step="0.5" value="${tileExtraRate}"
+                <input type="number" min="0" step="0.5" value="${tiltExtraRate}"
                   style="width:60px;padding:3px 6px;border:1.5px solid #90a4ae;border-radius:4px;font-size:12px;text-align:right;background:white;"
                   oninput="updateSolarMounting('${li.rowId}','tiltExtraRate',this.value)">
                 <span style="color:#37474f;">× ${mc.tiltPanelsUsed} panels = <strong>$${mc.tiltExtraCost.toFixed(2)}</strong></span>
@@ -1275,12 +1293,10 @@ function updateSolarMounting(rowId, field, val) {
     // When toggling off, reset the panel count so it auto-fills next time it's enabled
     if (!val) {
       if (field === 'mountTile') li.tilePanels = null;
-      if (field === 'mountTilt') { li.tiltPanels = null; li.tiltExtraFeet = 0; }
+      if (field === 'mountTilt') { li.tiltPanels = null; }
     }
   } else if (field === 'tilePanels' || field === 'tiltPanels') {
     li[field] = val === '' ? null : (parseInt(val) || 0);
-  } else if (field === 'tiltExtraFeet') {
-    li[field] = parseInt(val) || 0;
   } else if (field === 'tiltExtraRate') {
     li[field] = parseFloat(val) || 0;
   }
@@ -1388,9 +1404,8 @@ function autoCalcStcs() {
   // ── Show/hide zone selector (solar only) ──
   document.getElementById('zoneRow').style.display = hasSolar ? 'flex' : 'none';
 
-  // ── Show/hide rate rows ──
-  document.getElementById('solarRateRow').style.display   = hasSolar   ? 'flex' : 'none';
-  document.getElementById('batteryRateRow').style.display = hasBattery ? 'flex' : 'none';
+  // Rate row always visible when any STC-generating product present
+  document.getElementById('stcRateRow').style.display = (hasSolar || hasBattery) ? 'flex' : 'none';
 
   // ── Lock STC count field when battery-only ──
   const stcInput = document.getElementById('stcCount');
@@ -1415,26 +1430,53 @@ function autoCalcStcs() {
   let parts = [];
 
   if (hasSolar) {
-    // Show whether kW came from panels or inverter rating
     const kwSource = hasPanels
       ? `${panelKwTotal.toFixed(2)}kW panels`
       : `${inverterKwTotal}kW inverter`;
-    parts.push(`☀️ Solar: ${kwSource} × zone(${zoneFactor}) × ${demYears}yrs = ${inverterStcs} STCs`);
+    parts.push(`☀️ Solar: ${kwSource} × zone(${zoneFactor}) × ${demYears}yrs = ${inverterStcs}`);
   }
 
   if (hasBattery) {
     let batNote = `🔋 Battery: ${batteryKwhTotal.toFixed(2)}kWh`;
-    if (batteryKwhTotal > BATTERY_STC_MAX_KWH) batNote += ` (capped at ${BATTERY_STC_MAX_KWH}kWh eligible)`;
-    batNote += ` × ${batteryFactor} (${year} CER factor, no zone) = ${batteryStcs} STCs`;
-    if (postTaper) batNote += ` [post-May 2026 tapering applied]`;
+    if (batteryKwhTotal > BATTERY_STC_MAX_KWH) batNote += ` (capped ${BATTERY_STC_MAX_KWH}kWh)`;
+    batNote += ` × ${batteryFactor} (${year}) = ${batteryStcs}`;
+    if (postTaper) batNote += ` [tapered]`;
     parts.push(batNote);
   }
 
-  const note = parts.length ? parts.join('  |  ') : 'Add products to auto-calculate STCs';
+  const combinedTotal = (hasSolar || hasBattery)
+    ? `  →  Total: ${inverterStcs + batteryStcs} STCs` : '';
+  const note = parts.length
+    ? parts.join('  |  ') + combinedTotal
+    : 'Add products to auto-calculate STCs';
   const noteEl = document.getElementById('stcCalcNote');
   noteEl.textContent = note;
   noteEl.className = 'stc-calc-note';
 
+  recalculate();
+}
+
+function setStcRate(rate) {
+  document.getElementById('stcRate').value = rate;
+  // Highlight active preset button
+  document.getElementById('stcBtn38').style.background = rate === 38 ? '#1565c0' : 'white';
+  document.getElementById('stcBtn38').style.color      = rate === 38 ? 'white'   : '#5a6a7e';
+  document.getElementById('stcBtn38').style.borderColor= rate === 38 ? '#1565c0' : '#dce3ec';
+  document.getElementById('stcBtn40').style.background = rate === 40 ? '#1565c0' : 'white';
+  document.getElementById('stcBtn40').style.color      = rate === 40 ? 'white'   : '#5a6a7e';
+  document.getElementById('stcBtn40').style.borderColor= rate === 40 ? '#1565c0' : '#dce3ec';
+  recalculate();
+}
+
+function onStcRateInput() {
+  // Clear preset button highlights when user types a custom rate
+  const val = parseFloat(document.getElementById('stcRate').value);
+  document.getElementById('stcBtn38').style.background  = val === 38 ? '#1565c0' : 'white';
+  document.getElementById('stcBtn38').style.color       = val === 38 ? 'white'   : '#5a6a7e';
+  document.getElementById('stcBtn38').style.borderColor = val === 38 ? '#1565c0' : '#dce3ec';
+  document.getElementById('stcBtn40').style.background  = val === 40 ? '#1565c0' : 'white';
+  document.getElementById('stcBtn40').style.color       = val === 40 ? 'white'   : '#5a6a7e';
+  document.getElementById('stcBtn40').style.borderColor = val === 40 ? '#1565c0' : '#dce3ec';
   recalculate();
 }
 
@@ -1491,31 +1533,22 @@ function recalculate() {
   const gstAmt = sellPriceEx * 0.10;
   const grossInc = sellPriceEx + gstAmt; // = sellPriceEx * 1.10
 
-  // 4. STC rebate (GST exempt)
-  // Solar and battery STCs are calculated separately and use different rates
-  const { inverterStcs, batteryStcs, inverterKwTotal, batteryKwhTotal } = getBatterySolarStcs();
-  const hasSolar   = inverterKwTotal > 0;
+  // 4. STC rebate (GST exempt) — single unified rate applied to combined total
+  const { inverterStcs, batteryStcs, inverterKwTotal, batteryKwhTotal, solarKwForStc } = getBatterySolarStcs();
+  const hasSolar   = solarKwForStc > 0;
   const hasBattery = batteryKwhTotal > 0;
 
-  // Solar: editable spot rate (default $38)
-  const solarRate   = parseFloat(document.getElementById('stcRate').value) || 0;
-  // Battery: government fixed clearing house rate (default $40)
-  const batteryRate = parseFloat(document.getElementById('batteryStcRate').value) || 0;
+  // Single STC rate for both solar and battery STCs
+  const stcRate = parseFloat(document.getElementById('stcRate').value) || 0;
 
-  // If solar STC count manually overridden, use the overridden total count × solar rate
-  // Otherwise use the split calculation
   let stcRebate = 0;
   let stcCount  = 0;
   if (stcOverridden && hasSolar) {
-    // Manual override — whole count uses solar rate
     stcCount  = parseInt(document.getElementById('stcCount').value) || 0;
-    stcRebate = stcCount * solarRate;
+    stcRebate = stcCount * stcRate;
   } else {
-    // Auto — split: solar at spot rate, battery at govt rate
-    const solarRebate   = inverterStcs * solarRate;
-    const batteryRebate = batteryStcs  * batteryRate;
-    stcRebate = solarRebate + batteryRebate;
     stcCount  = inverterStcs + batteryStcs;
+    stcRebate = stcCount * stcRate;
   }
 
   // 5. OOP
@@ -1534,14 +1567,14 @@ function recalculate() {
   document.getElementById('sumOop').textContent       = fmt(oop);
   document.getElementById('stcRebateDisplay').textContent = fmt(stcRebate);
 
-  // Build rebate label — show split if both solar and battery present
+  // Rebate label — show solar/battery counts separately so formula is visible, then combined × rate
   let rebateLabel = '';
   if (hasSolar && hasBattery && !stcOverridden) {
-    rebateLabel = `☀️ ${inverterStcs} × $${solarRate.toFixed(0)} + 🔋 ${batteryStcs} × $${batteryRate.toFixed(0)}`;
+    rebateLabel = `☀️ ${inverterStcs} + 🔋 ${batteryStcs} = ${stcCount} STCs × $${stcRate.toFixed(0)}`;
   } else if (hasSolar) {
-    rebateLabel = `${stcCount} STCs × $${solarRate.toFixed(0)}`;
+    rebateLabel = `☀️ ${stcOverridden ? '' : inverterStcs + ' solar '}${stcCount} STCs × $${stcRate.toFixed(0)}`;
   } else if (hasBattery) {
-    rebateLabel = `🔋 ${batteryStcs} STCs × $${batteryRate.toFixed(0)} (govt rate)`;
+    rebateLabel = `🔋 ${batteryStcs} STCs × $${stcRate.toFixed(0)}`;
   } else {
     rebateLabel = '0 STCs';
   }
@@ -1608,6 +1641,94 @@ function updateSystemSummary() {
 }
 
 // ═══════════════════════════════════════════════════
+// QUOTE NUMBER — auto-generation & renumbering
+// ═══════════════════════════════════════════════════
+
+const QUOTE_START = 1000001;
+// Regex to find a 7-digit quote number starting with 1 in a Pi Quote HTML file
+const QUOTE_NUM_RE = /\b(1\d{6})\b/;
+
+// Scan a Customers directory handle for all Pi Quote.html files,
+// return the highest quote number found (or QUOTE_START - 1 if none)
+async function scanCustomersForLastQuoteNum(customersHandle) {
+  let maxNum = QUOTE_START - 1;
+  for await (const [, handle] of customersHandle.entries()) {
+    if (handle.kind !== 'directory') continue;
+    try {
+      const fh   = await handle.getFileHandle('Pi Quote.html');
+      const text = await (await fh.getFile()).text();
+      const m    = text.match(QUOTE_NUM_RE);
+      if (m) { const n = parseInt(m[1]); if (n > maxNum) maxNum = n; }
+    } catch (_) { /* no Pi Quote.html in this subfolder */ }
+  }
+  return maxNum;
+}
+
+// "# Auto" button — open Customers folder, scan, fill Quote Ref field
+async function getNextQuoteNumber() {
+  if (!('showDirectoryPicker' in window)) {
+    alert('File System Access not supported in this browser.');
+    return;
+  }
+  try {
+    const dir   = await window.showDirectoryPicker({ id: 'pi-customers', startIn: 'desktop', mode: 'read' });
+    const last  = await scanCustomersForLastQuoteNum(dir);
+    const next  = last + 1;
+    document.getElementById('quoteRef').value = String(next);
+    recalculate();
+  } catch (e) {
+    if (e.name !== 'AbortError') alert('Could not scan folder: ' + e.message);
+  }
+}
+
+// "Renumber All" admin button — assign sequential numbers to all existing Pi Quote files
+async function renumberAllQuotes() {
+  if (!('showDirectoryPicker' in window)) {
+    alert('File System Access not supported in this browser.');
+    return;
+  }
+  if (!confirm('This will rewrite ALL Pi Quote.html files in the Customers folder with new sequential reference numbers starting from 1000001.\n\nCustomer folders will be sorted alphabetically. Continue?')) return;
+
+  try {
+    const dir = await window.showDirectoryPicker({ id: 'pi-customers', startIn: 'desktop', mode: 'readwrite' });
+
+    // Collect all customer subfolders that contain Pi Quote.html
+    const entries = [];
+    for await (const [name, handle] of dir.entries()) {
+      if (handle.kind !== 'directory') continue;
+      try {
+        const fh   = await handle.getFileHandle('Pi Quote.html');
+        const text = await (await fh.getFile()).text();
+        entries.push({ name, fh, text });
+      } catch (_) { /* skip folders without Pi Quote.html */ }
+    }
+
+    if (entries.length === 0) { alert('No Pi Quote.html files found in the Customers folder.'); return; }
+
+    // Sort alphabetically by folder name (customer name)
+    entries.sort((a, b) => a.name.localeCompare(b.name));
+
+    // Assign sequential numbers and rewrite each file
+    let counter = QUOTE_START;
+    for (const entry of entries) {
+      // Replace the first 7-digit quote number found in the file
+      const newText = entry.text.replace(QUOTE_NUM_RE, String(counter));
+      const writable = await entry.fh.createWritable();
+      await writable.write(newText);
+      await writable.close();
+      counter++;
+    }
+
+    alert(`✅ Renumbered ${entries.length} quote file${entries.length > 1 ? 's' : ''}.\nRange: ${QUOTE_START} → ${counter - 1}\nNext available: ${counter}`);
+    // Also update the current quote ref to next available
+    document.getElementById('quoteRef').value = String(counter);
+    recalculate();
+  } catch (e) {
+    if (e.name !== 'AbortError') alert('Renumber failed: ' + e.message);
+  }
+}
+
+// ═══════════════════════════════════════════════════
 // ZONE CHANGE
 // ═══════════════════════════════════════════════════
 document.getElementById('stcZone').addEventListener('change', () => {
@@ -1638,6 +1759,15 @@ async function saveQuote() {
         startIn: 'desktop',
         mode: 'readwrite',
       });
+
+      // Auto-assign quote number if field is empty or not a valid sequential ref
+      const refField = document.getElementById('quoteRef');
+      if (!refField.value.trim() || !/^1\d{6}$/.test(refField.value.trim())) {
+        const last = await scanCustomersForLastQuoteNum(dirHandle);
+        refField.value = String(last + 1);
+        recalculate();
+      }
+
       // Create customer subfolder (First Last)
       const customerDir = await dirHandle.getDirectoryHandle(customerName, { create: true });
       // Write Pi Quote.html
@@ -1712,13 +1842,13 @@ function generateQuoteHTML() {
           <td style="padding:3px 10px;text-align:right;color:#5d4037;font-size:11px;">${fmt(mc.tileCost)}</td>
         </tr>`;
 
-      if (mc.tiltBaseCost + mc.tiltFootCost + mc.tiltExtraCost > 0) subRows += `
+      if (mc.tiltBaseCost + mc.tiltLegCost + mc.tiltExtraCost > 0) subRows += `
         <tr style="background:#f5faf5;">
           <td style="padding:3px 10px 3px 30px;color:#37474f;font-size:11px;" colspan="2">
             🏗️ Tilt Mounting — ${mc.tiltUnits} unit${mc.tiltUnits > 1 ? 's' : ''} × $89.90
-            ${mc.tiltFootCost > 0 ? ` + ${parseInt(li.tiltExtraFeet)} feet × $9.90` : ''}
+            + ${mc.tiltLegCount} legs (${mc.tiltPanelsUsed} panels + 1) × $9.90
             ${mc.tiltExtraCost > 0 ? ` + $${li.tiltExtraRate || 15}/panel × ${mc.tiltPanelsUsed} panels` : ''}</td>
-          <td style="padding:3px 10px;text-align:right;color:#37474f;font-size:11px;">${fmt(mc.tiltBaseCost + mc.tiltFootCost + mc.tiltExtraCost)}</td>
+          <td style="padding:3px 10px;text-align:right;color:#37474f;font-size:11px;">${fmt(mc.tiltBaseCost + mc.tiltLegCost + mc.tiltExtraCost)}</td>
         </tr>`;
     } else {
       const costEx = li.customCost !== null ? li.customCost : prod.costExGst;
@@ -1752,22 +1882,22 @@ function generateQuoteHTML() {
           demYears, zoneFactor, batteryFactor, year } = stcData;
   const hasSolar   = solarKwForStc > 0;
   const hasBattery = batteryKwhTotal > 0;
-  const solarRate   = parseFloat(document.getElementById('stcRate').value) || 0;
-  const batteryRate = parseFloat(document.getElementById('batteryStcRate').value) || 0;
+  const stcRate = parseFloat(document.getElementById('stcRate').value) || 0;
 
   let stcRebate = 0, stcLabel = '';
   if (stcOverridden && hasSolar) {
     const cnt = parseInt(document.getElementById('stcCount').value) || 0;
-    stcRebate = cnt * solarRate;
-    stcLabel  = `${cnt} STCs × $${solarRate.toFixed(0)} (manually overridden)`;
+    stcRebate = cnt * stcRate;
+    stcLabel  = `${cnt} STCs × $${stcRate.toFixed(0)} (manually overridden)`;
   } else {
-    stcRebate = (inverterStcs * solarRate) + (batteryStcs * batteryRate);
+    const totalStcs = inverterStcs + batteryStcs;
+    stcRebate = totalStcs * stcRate;
     if (hasSolar && hasBattery)
-      stcLabel = `☀️ ${inverterStcs} × $${solarRate.toFixed(0)} + 🔋 ${batteryStcs} × $${batteryRate.toFixed(0)}`;
+      stcLabel = `☀️ ${inverterStcs} + 🔋 ${batteryStcs} = ${totalStcs} STCs × $${stcRate.toFixed(0)}`;
     else if (hasSolar)
-      stcLabel = `${inverterStcs} solar STCs × $${solarRate.toFixed(0)}`;
+      stcLabel = `${inverterStcs} solar STCs × $${stcRate.toFixed(0)}`;
     else if (hasBattery)
-      stcLabel = `${batteryStcs} battery STCs × $${batteryRate.toFixed(0)} (govt rate)`;
+      stcLabel = `${batteryStcs} battery STCs × $${stcRate.toFixed(0)}`;
   }
   const oop = Math.max(0, grossInc - stcRebate);
 
