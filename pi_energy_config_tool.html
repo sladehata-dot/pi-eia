@@ -813,6 +813,18 @@ const PRODUCTS = [
     defaultIncluded: false,
     costEditable: true,      // user types actual freight cost
   },
+  // ── TILE ROOF MOUNTING ──
+  {
+    id: 'tile-kit-powerwave',
+    name: 'Powerwave Tile Roof Mounting Kit (6-panel)',
+    category: 'Mounting',
+    costExGst: 127.50,       // $77.50 kit + $50 (2× rail) per 6-panel set
+    suppliers: ['tz', 'osw'],
+    specs: 'Powerwave 6-panel | 30–35mm clamp | Black anodised | Excl. rail · SKU 89738 (TZ)',
+    unit: 'kit',
+    defaultIncluded: false,
+    isTileKit: true,         // used by mountingCalc to look up live price
+  },
   // ── REMOVE PANEL ──
   {
     id: 'remove-panel',
@@ -1176,13 +1188,17 @@ function solarPanelCalc(li) {
 }
 
 // ── MOUNTING HARDWARE COST HELPER ──
-// Tile roof:  1 unit per 6 panels × $127.50/unit
+// Tile roof:  1 kit per 6 panels — price from Powerwave tile kit product (id: tile-kit-powerwave)
 // Tilt mount: 1 unit per 6 panels × $89.90/unit
 //             + legs (panels_on_tilt + 1) × $9.90/leg  [auto-calculated]
 //             + extra per-panel rate
 // tilePanels / tiltPanels: null = use total panel qty; otherwise use entered value
 function mountingCalc(li) {
   const totalPanels = parseInt(li.qty) || 0;
+
+  // Look up tile kit price live from the product catalogue (default $127.50 if not found)
+  const tileKitProd  = PRODUCTS.find(p => p.isTileKit);
+  const tileKitPrice = tileKitProd ? tileKitProd.costExGst : 127.50;
 
   let tileUnits = 0, tileCost = 0, tilePanelsUsed = 0;
   let tiltUnits = 0, tiltBaseCost = 0, tiltLegCount = 0, tiltLegCost = 0,
@@ -1192,7 +1208,7 @@ function mountingCalc(li) {
     tilePanelsUsed = (li.tilePanels !== null && li.tilePanels !== undefined && li.tilePanels !== '')
       ? (parseInt(li.tilePanels) || 0) : totalPanels;
     tileUnits = Math.ceil(tilePanelsUsed / 6);
-    tileCost  = tileUnits * 127.50;
+    tileCost  = tileUnits * tileKitPrice;
   }
 
   if (li.mountTilt) {
@@ -1220,8 +1236,9 @@ function mountingCalc(li) {
   }
 
   const totalMountingCost = tileCost + tiltBaseCost + tiltLegCost + tiltExtraCost;
-  return { tileUnits, tileCost, tilePanelsUsed, tiltUnits, tiltBaseCost,
-           tiltLegCount, tiltLegCost, tiltExtraCost, tiltPanelsUsed, totalMountingCost };
+  return { tileUnits, tileCost, tilePanelsUsed, tileKitPrice,
+           tiltUnits, tiltBaseCost, tiltLegCount, tiltLegCost, tiltExtraCost, tiltPanelsUsed,
+           totalMountingCost };
 }
 
 // Full solar line total: panels + solar labour + mounting
@@ -1480,7 +1497,7 @@ function renderTable() {
                 <input type="checkbox" ${li.mountTile ? 'checked' : ''}
                   onchange="updateSolarMounting('${li.rowId}','mountTile',this.checked)">
                 Tile Roof
-                <span style="font-weight:400;color:#795548;font-size:11px;">$127.50/unit · 1 per 6 panels</span>
+                <span style="font-weight:400;color:#795548;font-size:11px;">$${mc.tileKitPrice.toFixed(2)}/kit · 1 per 6 panels</span>
               </label>
               ${li.mountTile ? `
               <div style="display:flex;align-items:center;gap:7px;margin-top:6px;padding-left:20px;flex-wrap:wrap;font-size:12px;">
@@ -2220,7 +2237,7 @@ function generateQuoteHTML() {
       if (mc.tileCost > 0) subRows += `
         <tr style="background:#f5faf5;">
           <td style="padding:3px 10px 3px 30px;color:#5d4037;font-size:11px;" colspan="2">
-            🏗️ Tile Mounting — ${mc.tileUnits} unit${mc.tileUnits > 1 ? 's' : ''} × $127.50</td>
+            🏗️ Tile Mounting (Powerwave) — ${mc.tileUnits} kit${mc.tileUnits > 1 ? 's' : ''} × $${mc.tileKitPrice.toFixed(2)}</td>
           <td style="padding:3px 10px;text-align:right;color:#5d4037;font-size:11px;">${fmt(mc.tileCost)}</td>
         </tr>`;
 
