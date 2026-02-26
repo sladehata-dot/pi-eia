@@ -631,8 +631,28 @@
             Change
           </button>
         </div>
-        <div style="display:flex;justify-content:flex-end;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <button onclick="openQuotePanel()" style="padding:9px 16px;font-size:13px;font-weight:600;border-radius:6px;cursor:pointer;border:1.5px solid #1565c0;background:white;color:#1565c0;">
+            📂 Open Quote
+          </button>
           <button class="btn-save" onclick="saveQuote()">💾 Save Quote</button>
+        </div>
+
+        <!-- Recent quotes panel (hidden until Open clicked) -->
+        <div id="openQuotePanel" style="display:none;margin-top:12px;border:1.5px solid #1565c0;border-radius:8px;background:#f5f8fc;padding:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <span style="font-size:12px;font-weight:700;color:#0a2d4e;">📂 Open Saved Quote</span>
+            <button onclick="document.getElementById('openQuotePanel').style.display='none'" style="background:none;border:none;cursor:pointer;color:#9aa5b4;font-size:16px;">✕</button>
+          </div>
+          <div id="recentQuotesList" style="max-height:180px;overflow-y:auto;margin-bottom:8px;"></div>
+          <div style="display:flex;gap:8px;border-top:1px solid #dce3ec;padding-top:8px;">
+            <button onclick="loadQuoteFromFile()" style="flex:1;padding:6px;font-size:12px;border:1px solid #dce3ec;border-radius:5px;background:white;color:#5a6a7e;cursor:pointer;">
+              📄 Browse for JSON file…
+            </button>
+            <button onclick="clearRecentQuotes()" style="padding:6px 10px;font-size:11px;border:1px solid #ffcdd2;border-radius:5px;background:white;color:#c62828;cursor:pointer;" title="Clear recent quotes list">
+              🗑 Clear list
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -713,6 +733,7 @@
 const SUPPLIERS = [
   { id: 'tz',  name: 'Tradezone (TZ)' },
   { id: 'osw', name: 'One Stop Warehouse (OSW)' },
+  { id: 'red', name: 'RED' },
   { id: 'az',  name: 'AZ Energy / HyXiPower' },
   { id: 'pi',  name: 'Pi Energy (internal)' },
 ];
@@ -741,6 +762,30 @@ const PRODUCTS = [
     inverterKw: 30,
     defaultIncluded: false,
   },
+  // ── INVERTERS (RED) ──
+  {
+    id: 'foxess-inv-10kw-red',
+    name: 'FoxESS 10kW Single Phase Inverter',
+    category: 'Inverter',
+    costExGst: 2145,
+    suppliers: ['red'],
+    specs: '10kW | Single Phase | Hybrid | RED supply',
+    unit: 'unit',
+    inverterKw: 10,
+    defaultIncluded: false,
+  },
+  {
+    id: 'foxess-inv-30kw-red',
+    name: 'FoxESS 30kW Three Phase Inverter',
+    category: 'Inverter',
+    costExGst: 0,
+    suppliers: ['red'],
+    specs: '30kW | Three Phase | Hybrid | RED supply — price TBA',
+    unit: 'unit',
+    inverterKw: 30,
+    defaultIncluded: false,
+    costEditable: true,      // price TBA — enter when confirmed
+  },
   // ── BATTERIES ──
   {
     id: 'foxess-cq6-battery',
@@ -751,6 +796,29 @@ const PRODUCTS = [
     specs: '5.99 kWh | Master + Slave config',
     unit: 'module',
     batteryKwh: 5.99,        // used for STC battery calc
+    defaultIncluded: false,
+  },
+  // ── FOXESS EQ4800 HIGH VOLTAGE BATTERIES (RED) ──
+  {
+    id: 'foxess-eq4800-master',
+    name: 'FoxESS EQ4800 4.66kWh HV Battery – Master',
+    category: 'Battery',
+    costExGst: 1430,
+    suppliers: ['red'],
+    specs: 'Model: EQ4800-M | 4.66kWh | High Voltage | Master unit (required first)',
+    unit: 'module',
+    batteryKwh: 4.66,
+    defaultIncluded: false,
+  },
+  {
+    id: 'foxess-eq4800-slave',
+    name: 'FoxESS EQ4800 4.66kWh HV Battery – Slave',
+    category: 'Battery',
+    costExGst: 1320,
+    suppliers: ['red'],
+    specs: 'Model: EQ4800-S | 4.66kWh | High Voltage | Slave unit (add to Master)',
+    unit: 'module',
+    batteryKwh: 4.66,
     defaultIncluded: false,
   },
   // ── HYXIPOWER KITS (AZ Energy) ──
@@ -2039,6 +2107,145 @@ function peekQuoteNum() {
 function getNextQuoteNum() { return peekQuoteNum() + 1; }
 function commitQuoteNum(n) { localStorage.setItem(QUOTE_COUNTER_KEY, String(n)); }
 
+// ═══════════════════════════════════════════════════
+// QUOTE STATE — save/restore entire tool state as JSON
+// ═══════════════════════════════════════════════════
+const RECENT_QUOTES_KEY = 'pi_recent_quotes';  // localStorage index
+
+function captureState() {
+  return {
+    version: 2,
+    savedAt:        new Date().toISOString(),
+    quoteRef:       document.getElementById('quoteRef').value.trim(),
+    customerName:   document.getElementById('customerName').value.trim(),
+    quoteDate:      document.getElementById('quoteDate').value,
+    marginPct:      parseFloat(document.getElementById('marginPct').value) || 30,
+    stcRateSolar:   parseFloat(document.getElementById('stcRateSolar').value) || 38,
+    stcRateBattery: parseFloat(document.getElementById('stcRateBattery').value) || 40,
+    zone:           document.getElementById('zoneSelect')?.value || '3',
+    stcOverridden,
+    stcManualCount: stcOverridden
+      ? (parseInt(document.getElementById('stcCount')?.value) || null) : null,
+    lineItems: lineItems.map(li => ({ ...li })),
+  };
+}
+
+function restoreState(state) {
+  if (!state || !state.version) { alert('Invalid quote file — cannot load.'); return; }
+
+  lineItems.length = 0;
+  rowCounter       = 0;
+  stcOverridden    = false;
+
+  document.getElementById('customerName').value   = state.customerName   || '';
+  document.getElementById('quoteRef').value       = state.quoteRef       || '';
+  document.getElementById('quoteDate').value      = state.quoteDate      || '';
+  document.getElementById('marginPct').value      = state.marginPct      ?? 30;
+  document.getElementById('stcRateSolar').value   = state.stcRateSolar   ?? 38;
+  document.getElementById('stcRateBattery').value = state.stcRateBattery ?? 40;
+  const zoneEl = document.getElementById('zoneSelect');
+  if (zoneEl && state.zone) zoneEl.value = state.zone;
+
+  (state.lineItems || []).forEach(li => {
+    rowCounter++;
+    lineItems.push({ ...li, rowId: `row-${rowCounter}` });
+  });
+
+  stcOverridden = !!state.stcOverridden;
+  if (stcOverridden && state.stcManualCount !== null) {
+    const el = document.getElementById('stcCount');
+    if (el) { el.value = state.stcManualCount; el.style.display = 'inline'; }
+  }
+
+  renderTable();
+  autoCalcStcs();
+  recalculate();
+  document.getElementById('openQuotePanel').style.display = 'none';
+  window.scrollTo(0, 0);
+}
+
+// ── Persist recent quotes index to localStorage ──
+function storeRecentQuote(state) {
+  const idx = JSON.parse(localStorage.getItem(RECENT_QUOTES_KEY) || '[]');
+  // Remove existing entry for same ref (avoid duplicates)
+  const filtered = idx.filter(e => e.quoteRef !== state.quoteRef);
+  filtered.unshift({
+    quoteRef:     state.quoteRef,
+    customerName: state.customerName,
+    quoteDate:    state.quoteDate,
+    savedAt:      state.savedAt,
+    stateKey:     `pi_state_${state.quoteRef}`,
+  });
+  const trimmed = filtered.slice(0, 30); // keep last 30
+  localStorage.setItem(RECENT_QUOTES_KEY, JSON.stringify(trimmed));
+  localStorage.setItem(`pi_state_${state.quoteRef}`, JSON.stringify(state));
+}
+
+// ── Open Quote Panel ──
+function openQuotePanel() {
+  const panel = document.getElementById('openQuotePanel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  if (panel.style.display === 'block') renderRecentQuotesList();
+}
+
+function renderRecentQuotesList() {
+  const list = document.getElementById('recentQuotesList');
+  const idx  = JSON.parse(localStorage.getItem(RECENT_QUOTES_KEY) || '[]');
+  if (!idx.length) {
+    list.innerHTML = '<div style="font-size:12px;color:#9aa5b4;padding:6px 0;">No saved quotes yet.</div>';
+    return;
+  }
+  list.innerHTML = idx.map(e => `
+    <div onclick="loadRecentQuote('${e.stateKey}')"
+         style="display:flex;justify-content:space-between;align-items:center;
+                padding:7px 10px;border-radius:5px;cursor:pointer;margin-bottom:3px;
+                background:white;border:1px solid #dce3ec;font-size:12px;"
+         onmouseover="this.style.background='#e3f2fd'" onmouseout="this.style.background='white'">
+      <div>
+        <strong style="color:#0a2d4e;">${e.customerName || '(no name)'}</strong>
+        <span style="color:#9aa5b4;margin-left:8px;">#${e.quoteRef}</span>
+      </div>
+      <div style="color:#9aa5b4;font-size:11px;">${e.quoteDate || ''}</div>
+    </div>`).join('');
+}
+
+function loadRecentQuote(stateKey) {
+  const raw = localStorage.getItem(stateKey);
+  if (!raw) { alert('Quote data not found — it may have been cleared.'); return; }
+  try {
+    restoreState(JSON.parse(raw));
+  } catch(e) { alert('Could not load quote: ' + e.message); }
+}
+
+async function loadQuoteFromFile() {
+  if (!('showOpenFilePicker' in window)) {
+    // Fallback: hidden file input
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = '.json';
+    input.onchange = async () => {
+      const file = input.files[0];
+      if (!file) return;
+      try { restoreState(JSON.parse(await file.text())); }
+      catch(e) { alert('Could not read file: ' + e.message); }
+    };
+    input.click(); return;
+  }
+  try {
+    const [fh]  = await window.showOpenFilePicker({ types: [{ description: 'Pi Quote JSON', accept: { 'application/json': ['.json'] } }] });
+    const file  = await fh.getFile();
+    const state = JSON.parse(await file.text());
+    restoreState(state);
+  } catch(e) { if (e.name !== 'AbortError') alert('Could not open file: ' + e.message); }
+}
+
+function clearRecentQuotes() {
+  if (!confirm('Clear the recent quotes list? (Saved HTML files are not affected.)')) return;
+  const idx = JSON.parse(localStorage.getItem(RECENT_QUOTES_KEY) || '[]');
+  idx.forEach(e => localStorage.removeItem(e.stateKey));
+  localStorage.removeItem(RECENT_QUOTES_KEY);
+  renderRecentQuotesList();
+}
+
 // ── Folder handle persistence (IndexedDB) ──
 // Stores the FileSystemDirectoryHandle across sessions so the user only
 // needs to pick the Customers folder once. Chrome auto-grants permission
@@ -2140,6 +2347,9 @@ async function saveQuote() {
   try {
     const quoteHtml    = generateQuoteHTML();
     const customerHtml = generateCustomerQuoteHTML();
+    // Capture full quote state NOW (before quote number is bumped)
+    const state        = captureState();
+    const stateJson    = JSON.stringify(state, null, 2);
 
     // ── Try local save-server first (pi-save-server.js on port 3737) ──
     // If running, saves directly to filesystem — no picker, no prompts.
@@ -2153,13 +2363,15 @@ async function saveQuote() {
           body: JSON.stringify({
             customerName,
             files: [
-              { name: 'Pi Quote.html',      content: quoteHtml    },
-              { name: 'Customer Copy.html', content: customerHtml },
+              { name: 'Pi Quote.html',         content: quoteHtml    },
+              { name: 'Customer Copy.html',     content: customerHtml },
+              { name: 'pi-quote-state.json',    content: stateJson    },
             ]
           })
         });
         const data = await res.json();
         if (data.ok) {
+          storeRecentQuote(state);
           commitQuoteNum(quoteNum);
           refField.value = String(quoteNum + 1);
           recalculate();
@@ -2191,8 +2403,9 @@ async function saveQuote() {
       }
 
       commitQuoteNum(quoteNum);
+      storeRecentQuote(state);
 
-      // ── Write both files into customer subfolder ──
+      // ── Write all three files into customer subfolder ──
       const customerDir = await dirHandle.getDirectoryHandle(customerName, { create: true });
 
       // Internal copy
@@ -2207,6 +2420,12 @@ async function saveQuote() {
       await custWrite.write(customerHtml);
       await custWrite.close();
 
+      // State JSON (for Open Quote / restore)
+      const stateHandle = await customerDir.getFileHandle('pi-quote-state.json', { create: true });
+      const stateWrite  = await stateHandle.createWritable();
+      await stateWrite.write(stateJson);
+      await stateWrite.close();
+
       refField.value = String(quoteNum + 1);
       recalculate();
 
@@ -2216,18 +2435,20 @@ async function saveQuote() {
       setTimeout(() => { saveBtn.textContent = original; saveBtn.style.background = ''; }, 3500);
 
     } else {
-      // Fallback — trigger two downloads
+      // Fallback — trigger downloads (HTML + state JSON)
       commitQuoteNum(quoteNum);
-      const dl = (html, filename) => {
-        const blob = new Blob([html], { type: 'text/html' });
+      storeRecentQuote(state);
+      const dl = (content, filename, mime) => {
+        const blob = new Blob([content], { type: mime });
         const url  = URL.createObjectURL(blob);
         const a    = document.createElement('a');
         a.href = url; a.download = filename;
         document.body.appendChild(a); a.click();
         document.body.removeChild(a); URL.revokeObjectURL(url);
       };
-      dl(quoteHtml,    `Pi Quote - ${customerName}.html`);
-      dl(customerHtml, `Customer Copy - ${customerName}.html`);
+      dl(quoteHtml,    `Pi Quote - ${customerName}.html`,         'text/html');
+      dl(customerHtml, `Customer Copy - ${customerName}.html`,    'text/html');
+      dl(stateJson,    `pi-quote-state - ${customerName}.json`,   'application/json');
       refField.value = String(quoteNum + 1);
       recalculate();
     }
