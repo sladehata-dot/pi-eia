@@ -464,17 +464,8 @@
       <!-- Quote info -->
       <div class="quote-row">
         <div class="field-group">
-          <label>Quote Reference
-            <button onclick="getNextQuoteNumber()" title="Scan Customer folder for next sequential quote number"
-              style="margin-left:6px;font-size:10px;font-weight:700;padding:1px 7px;border-radius:4px;cursor:pointer;border:1.5px solid #1565c0;background:white;color:#1565c0;vertical-align:middle;">
-              # Auto
-            </button>
-            <button onclick="renumberAllQuotes()" title="Renumber all existing Pi Quote files sequentially from 1000001"
-              style="margin-left:3px;font-size:10px;font-weight:700;padding:1px 7px;border-radius:4px;cursor:pointer;border:1.5px solid #e65100;background:white;color:#e65100;vertical-align:middle;">
-              Renumber All
-            </button>
-          </label>
-          <input type="text" id="quoteRef" placeholder="Click # Auto to generate…" oninput="recalculate()">
+          <label>Quote Reference</label>
+          <input type="text" id="quoteRef" placeholder="Auto-assigned on load…" oninput="recalculate()">
         </div>
         <div class="field-group">
           <label>Customer</label>
@@ -592,21 +583,35 @@
           </div>
           <div class="stc-calc-note" id="stcCalcNote">Add products to calculate</div>
 
-          <!-- Single unified STC rate -->
-          <div class="ctrl-row" style="margin-top:6px;" id="stcRateRow">
-            <label>STC rate ($)</label>
+          <!-- ☀️ Solar STC rate (shown when solar panels/inverter present) -->
+          <div class="ctrl-row" style="margin-top:6px;display:none;" id="stcSolarRateRow">
+            <label>☀️ Solar rate ($)</label>
             <div style="display:flex;align-items:center;gap:4px;">
-              <button onclick="setStcRate(38)" id="stcBtn38"
+              <button onclick="setStcRateSolar(38)" id="stcSolarBtn38"
                 style="padding:3px 7px;font-size:11px;font-weight:700;border-radius:4px;cursor:pointer;border:1.5px solid #1565c0;background:#1565c0;color:white;">$38</button>
-              <button onclick="setStcRate(40)" id="stcBtn40"
+              <button onclick="setStcRateSolar(40)" id="stcSolarBtn40"
                 style="padding:3px 7px;font-size:11px;font-weight:700;border-radius:4px;cursor:pointer;border:1.5px solid #dce3ec;background:white;color:#5a6a7e;">$40</button>
-              <input type="number" id="stcRate" value="38" min="0" step="0.5"
+              <input type="number" id="stcRateSolar" value="38" min="0" step="0.5"
                 style="width:62px;padding:4px 6px;border:1.5px solid #dce3ec;border-radius:5px;font-size:13px;text-align:right;outline:none;"
-                oninput="onStcRateInput()">
+                oninput="onStcRateSolarInput()">
+              <span id="stcSolarRebateAmt" style="font-size:11px;color:#c62828;min-width:50px;text-align:right;"></span>
             </div>
           </div>
 
-          <div class="ctrl-row">
+          <!-- 🔋 Battery STC rate (shown when battery present) -->
+          <div class="ctrl-row" style="margin-top:4px;display:none;" id="stcBatteryRateRow">
+            <label>🔋 Battery rate ($)</label>
+            <div style="display:flex;align-items:center;gap:4px;">
+              <button onclick="setStcRateBattery(40)" id="stcBatteryBtn40"
+                style="padding:3px 7px;font-size:11px;font-weight:700;border-radius:4px;cursor:pointer;border:1.5px solid #1565c0;background:#1565c0;color:white;">$40</button>
+              <input type="number" id="stcRateBattery" value="40" min="0" step="0.5"
+                style="width:62px;padding:4px 6px;border:1.5px solid #dce3ec;border-radius:5px;font-size:13px;text-align:right;outline:none;"
+                oninput="onStcRateBatteryInput()">
+              <span id="stcBatteryRebateAmt" style="font-size:11px;color:#c62828;min-width:50px;text-align:right;"></span>
+            </div>
+          </div>
+
+          <div class="ctrl-row" style="margin-top:4px;">
             <label>Total STC Rebate</label>
             <span id="stcRebateDisplay" style="font-weight:700;color:#c62828;font-size:13px;">$0</span>
           </div>
@@ -614,10 +619,20 @@
 
       </div>
 
-      <!-- Save quote button -->
-      <div style="margin-top:16px;padding-top:14px;border-top:2px solid #f0f4f8;display:flex;align-items:center;justify-content:space-between;">
-        <span style="font-size:11px;color:#9aa5b4;">Saves to: Pi Ops\Customers\[Customer Name]\Pi Quote.html</span>
-        <button class="btn-save" onclick="saveQuote()">💾 Save Quote to Customer Folder</button>
+      <!-- Save quote footer -->
+      <div style="margin-top:16px;padding-top:14px;border-top:2px solid #f0f4f8;">
+        <!-- Folder indicator row -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:12px;">
+          <span style="color:#9aa5b4;">📁 Customers folder:</span>
+          <span id="folderIndicator" style="color:#e65100;font-weight:600;">Not set — will prompt on first save</span>
+          <button id="btnChangeFolder" onclick="changeCustomersFolder()"
+            style="font-size:10px;padding:2px 8px;border:1px solid #dce3ec;border-radius:4px;background:white;color:#5a6a7e;cursor:pointer;display:none;">
+            Change
+          </button>
+        </div>
+        <div style="display:flex;justify-content:flex-end;">
+          <button class="btn-save" onclick="saveQuote()">💾 Save Quote</button>
+        </div>
       </div>
     </div>
   </div>
@@ -907,6 +922,17 @@ document.addEventListener('DOMContentLoaded', () => {
     opt.textContent = s.name;
     if (s.id === 'pi') opt.selected = true; // default to Pi Energy (internal)
     customSupSel.appendChild(opt);
+  });
+
+  // Auto-fill Quote Ref from localStorage counter (number is "reserved" on load)
+  document.getElementById('quoteRef').value = String(getNextQuoteNum());
+
+  // Restore Customers folder handle from IndexedDB (silent — no picker shown)
+  loadCustomersHandle().then(handle => {
+    if (handle) {
+      customersHandleCache = handle;
+      updateFolderIndicator(handle.name);
+    }
   });
 
   // Set STC alert
@@ -1611,8 +1637,9 @@ function autoCalcStcs() {
   // ── Show/hide zone selector (solar only) ──
   document.getElementById('zoneRow').style.display = hasSolar ? 'flex' : 'none';
 
-  // Rate row always visible when any STC-generating product present
-  document.getElementById('stcRateRow').style.display = (hasSolar || hasBattery) ? 'flex' : 'none';
+  // Show solar rate row only when solar is present; battery rate row only when battery present
+  document.getElementById('stcSolarRateRow').style.display   = hasSolar   ? 'flex' : 'none';
+  document.getElementById('stcBatteryRateRow').style.display = hasBattery ? 'flex' : 'none';
 
   // ── Lock STC count field when battery-only ──
   const stcInput = document.getElementById('stcCount');
@@ -1663,28 +1690,43 @@ function autoCalcStcs() {
   recalculate();
 }
 
-function setStcRate(rate) {
-  document.getElementById('stcRate').value = rate;
-  // Highlight active preset button
-  document.getElementById('stcBtn38').style.background = rate === 38 ? '#1565c0' : 'white';
-  document.getElementById('stcBtn38').style.color      = rate === 38 ? 'white'   : '#5a6a7e';
-  document.getElementById('stcBtn38').style.borderColor= rate === 38 ? '#1565c0' : '#dce3ec';
-  document.getElementById('stcBtn40').style.background = rate === 40 ? '#1565c0' : 'white';
-  document.getElementById('stcBtn40').style.color      = rate === 40 ? 'white'   : '#5a6a7e';
-  document.getElementById('stcBtn40').style.borderColor= rate === 40 ? '#1565c0' : '#dce3ec';
+function _highlightStcBtn(btn38Id, btn40Id, val) {
+  const b38 = document.getElementById(btn38Id);
+  const b40 = document.getElementById(btn40Id);
+  if (!b38 || !b40) return;
+  b38.style.background  = val === 38 ? '#1565c0' : 'white';
+  b38.style.color       = val === 38 ? 'white'   : '#5a6a7e';
+  b38.style.borderColor = val === 38 ? '#1565c0' : '#dce3ec';
+  b40.style.background  = val === 40 ? '#1565c0' : 'white';
+  b40.style.color       = val === 40 ? 'white'   : '#5a6a7e';
+  b40.style.borderColor = val === 40 ? '#1565c0' : '#dce3ec';
+}
+
+function setStcRateSolar(rate) {
+  document.getElementById('stcRateSolar').value = rate;
+  _highlightStcBtn('stcSolarBtn38', 'stcSolarBtn40', rate);
+  recalculate();
+}
+function onStcRateSolarInput() {
+  const val = parseFloat(document.getElementById('stcRateSolar').value);
+  _highlightStcBtn('stcSolarBtn38', 'stcSolarBtn40', val);
   recalculate();
 }
 
-function onStcRateInput() {
-  // Clear preset button highlights when user types a custom rate
-  const val = parseFloat(document.getElementById('stcRate').value);
-  document.getElementById('stcBtn38').style.background  = val === 38 ? '#1565c0' : 'white';
-  document.getElementById('stcBtn38').style.color       = val === 38 ? 'white'   : '#5a6a7e';
-  document.getElementById('stcBtn38').style.borderColor = val === 38 ? '#1565c0' : '#dce3ec';
-  document.getElementById('stcBtn40').style.background  = val === 40 ? '#1565c0' : 'white';
-  document.getElementById('stcBtn40').style.color       = val === 40 ? 'white'   : '#5a6a7e';
-  document.getElementById('stcBtn40').style.borderColor = val === 40 ? '#1565c0' : '#dce3ec';
+function setStcRateBattery(rate) {
+  document.getElementById('stcRateBattery').value = rate;
+  // Only one preset button for battery ($40 govt rate)
+  const b40 = document.getElementById('stcBatteryBtn40');
+  if (b40) {
+    b40.style.background  = rate === 40 ? '#1565c0' : 'white';
+    b40.style.color       = rate === 40 ? 'white'   : '#5a6a7e';
+    b40.style.borderColor = rate === 40 ? '#1565c0' : '#dce3ec';
+  }
   recalculate();
+}
+function onStcRateBatteryInput() {
+  const val = parseFloat(document.getElementById('stcRateBattery').value);
+  setStcRateBattery(val);
 }
 
 function stcManualOverride() {
@@ -1752,18 +1794,25 @@ function recalculate() {
   const hasSolar   = solarKwForStc > 0;
   const hasBattery = batteryKwhTotal > 0;
 
-  // Single STC rate for both solar and battery STCs
-  const stcRate = parseFloat(document.getElementById('stcRate').value) || 0;
+  // Separate STC rates: solar (spot market, default $38) + battery (govt rate, default $40)
+  const stcRateSolar   = parseFloat(document.getElementById('stcRateSolar').value)   || 0;
+  const stcRateBattery = parseFloat(document.getElementById('stcRateBattery').value) || 0;
 
-  let stcRebate = 0;
-  let stcCount  = 0;
+  let solarRebate = 0, batteryRebate = 0;
+  let displaySolarStcs = inverterStcs;
   if (stcOverridden && hasSolar) {
-    stcCount  = parseInt(document.getElementById('stcCount').value) || 0;
-    stcRebate = stcCount * stcRate;
-  } else {
-    stcCount  = inverterStcs + batteryStcs;
-    stcRebate = stcCount * stcRate;
+    displaySolarStcs = parseInt(document.getElementById('stcCount').value) || 0;
   }
+  if (hasSolar)   solarRebate   = displaySolarStcs * stcRateSolar;
+  if (hasBattery) batteryRebate = batteryStcs * stcRateBattery;
+  const stcRebate = solarRebate + batteryRebate;
+  const stcCount  = displaySolarStcs + batteryStcs;
+
+  // Update inline "= $X" amounts next to each rate input
+  const solarAmtEl   = document.getElementById('stcSolarRebateAmt');
+  const batteryAmtEl = document.getElementById('stcBatteryRebateAmt');
+  if (solarAmtEl)   solarAmtEl.textContent   = hasSolar   ? `= $${solarRebate.toLocaleString('en-AU',{minimumFractionDigits:0})}` : '';
+  if (batteryAmtEl) batteryAmtEl.textContent = hasBattery ? `= $${batteryRebate.toLocaleString('en-AU',{minimumFractionDigits:0})}` : '';
 
   // 5. OOP
   const oop = Math.max(0, grossInc - stcRebate);
@@ -1781,17 +1830,14 @@ function recalculate() {
   document.getElementById('sumOop').textContent       = fmt(oop);
   document.getElementById('stcRebateDisplay').textContent = fmt(stcRebate);
 
-  // Rebate label — show solar/battery counts separately so formula is visible, then combined × rate
+  // Rebate label — show solar and battery contributions separately
   let rebateLabel = '';
-  if (hasSolar && hasBattery && !stcOverridden) {
-    rebateLabel = `☀️ ${inverterStcs} + 🔋 ${batteryStcs} = ${stcCount} STCs × $${stcRate.toFixed(0)}`;
-  } else if (hasSolar) {
-    rebateLabel = `☀️ ${stcOverridden ? '' : inverterStcs + ' solar '}${stcCount} STCs × $${stcRate.toFixed(0)}`;
-  } else if (hasBattery) {
-    rebateLabel = `🔋 ${batteryStcs} STCs × $${stcRate.toFixed(0)}`;
-  } else {
-    rebateLabel = '0 STCs';
-  }
+  const solarLine   = hasSolar   ? `☀️ ${displaySolarStcs} × $${stcRateSolar.toFixed(0)} = $${solarRebate.toLocaleString('en-AU',{minimumFractionDigits:0})}` : '';
+  const batteryLine = hasBattery ? `🔋 ${batteryStcs} × $${stcRateBattery.toFixed(0)} = $${batteryRebate.toLocaleString('en-AU',{minimumFractionDigits:0})}` : '';
+  if (hasSolar && hasBattery) rebateLabel = solarLine + '  |  ' + batteryLine;
+  else if (hasSolar)           rebateLabel = solarLine + (stcOverridden ? ' ⚠️ manual' : '');
+  else if (hasBattery)         rebateLabel = batteryLine;
+  else                         rebateLabel = '0 STCs';
   document.getElementById('sumRebate').textContent    = '−' + fmt(stcRebate);
   document.getElementById('sumStcLabel').textContent  = rebateLabel;
 
@@ -1866,87 +1912,84 @@ function updateSystemSummary() {
 // QUOTE NUMBER — auto-generation & renumbering
 // ═══════════════════════════════════════════════════
 
-const QUOTE_START = 1000001;
-// Regex to find a 7-digit quote number starting with 1 in a Pi Quote HTML file
-const QUOTE_NUM_RE = /\b(1\d{6})\b/;
+const QUOTE_START       = 1000001;
+const QUOTE_NUM_RE      = /\b(1\d{6})\b/;  // still used in generateQuoteHTML
+const QUOTE_COUNTER_KEY = 'pi_quote_last'; // localStorage key
 
-// Scan a Customers directory handle for all Pi Quote.html files,
-// return the highest quote number found (or QUOTE_START - 1 if none)
-async function scanCustomersForLastQuoteNum(customersHandle) {
-  let maxNum = QUOTE_START - 1;
-  for await (const [, handle] of customersHandle.entries()) {
-    if (handle.kind !== 'directory') continue;
-    try {
-      const fh   = await handle.getFileHandle('Pi Quote.html');
-      const text = await (await fh.getFile()).text();
-      const m    = text.match(QUOTE_NUM_RE);
-      if (m) { const n = parseInt(m[1]); if (n > maxNum) maxNum = n; }
-    } catch (_) { /* no Pi Quote.html in this subfolder */ }
-  }
-  return maxNum;
+// ── Quote counter (localStorage) ──
+// Tracks the last-used quote number locally so no folder scan is needed.
+function peekQuoteNum() {
+  const n = parseInt(localStorage.getItem(QUOTE_COUNTER_KEY));
+  return (!isNaN(n) && n >= QUOTE_START) ? n : QUOTE_START - 1;
+}
+function getNextQuoteNum() { return peekQuoteNum() + 1; }
+function commitQuoteNum(n) { localStorage.setItem(QUOTE_COUNTER_KEY, String(n)); }
+
+// ── Folder handle persistence (IndexedDB) ──
+// Stores the FileSystemDirectoryHandle across sessions so the user only
+// needs to pick the Customers folder once. Chrome auto-grants permission
+// for handles stored this way in the same origin.
+const IDB_NAME    = 'pi-energy-v1';
+const IDB_STORE   = 'handles';
+const IDB_KEY_DIR = 'customers-dir';
+
+function openHandleDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore(IDB_STORE);
+    req.onsuccess = e => resolve(e.target.result);
+    req.onerror   = e => reject(e.target.error);
+  });
+}
+async function storeCustomersHandle(handle) {
+  const db = await openHandleDB();
+  return new Promise((resolve, reject) => {
+    const tx  = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).put(handle, IDB_KEY_DIR);
+    tx.oncomplete = resolve;
+    tx.onerror    = e => reject(e.target.error);
+  });
+}
+async function loadCustomersHandle() {
+  try {
+    const db = await openHandleDB();
+    return new Promise(resolve => {
+      const tx  = db.transaction(IDB_STORE, 'readonly');
+      const req = tx.objectStore(IDB_STORE).get(IDB_KEY_DIR);
+      req.onsuccess = e => resolve(e.target.result || null);
+      req.onerror   = () => resolve(null);
+    });
+  } catch (_) { return null; }
 }
 
-// "# Auto" button — open Customers folder, scan, fill Quote Ref field
-async function getNextQuoteNumber() {
-  if (!('showDirectoryPicker' in window)) {
-    alert('File System Access not supported in this browser.');
-    return;
-  }
-  try {
-    const dir   = await window.showDirectoryPicker({ id: 'pi-customers', startIn: 'desktop', mode: 'read' });
-    const last  = await scanCustomersForLastQuoteNum(dir);
-    const next  = last + 1;
-    document.getElementById('quoteRef').value = String(next);
-    recalculate();
-  } catch (e) {
-    if (e.name !== 'AbortError') alert('Could not scan folder: ' + e.message);
+// ── Folder indicator UI ──
+let customersHandleCache = null; // in-session cache
+
+function updateFolderIndicator(name) {
+  const ind  = document.getElementById('folderIndicator');
+  const btn  = document.getElementById('btnChangeFolder');
+  if (!ind) return;
+  if (name) {
+    ind.textContent = name;
+    ind.style.color = '#2e7d32';
+    if (btn) btn.style.display = 'inline-block';
+  } else {
+    ind.textContent = 'Not set — will prompt on first save';
+    ind.style.color = '#e65100';
+    if (btn) btn.style.display = 'none';
   }
 }
 
-// "Renumber All" admin button — assign sequential numbers to all existing Pi Quote files
-async function renumberAllQuotes() {
-  if (!('showDirectoryPicker' in window)) {
-    alert('File System Access not supported in this browser.');
-    return;
-  }
-  if (!confirm('This will rewrite ALL Pi Quote.html files in the Customers folder with new sequential reference numbers starting from 1000001.\n\nCustomer folders will be sorted alphabetically. Continue?')) return;
-
+// Let user pick a different folder (or set it for the first time explicitly)
+async function changeCustomersFolder() {
+  if (!('showDirectoryPicker' in window)) { alert('File System Access API not supported.'); return; }
   try {
-    const dir = await window.showDirectoryPicker({ id: 'pi-customers', startIn: 'desktop', mode: 'readwrite' });
-
-    // Collect all customer subfolders that contain Pi Quote.html
-    const entries = [];
-    for await (const [name, handle] of dir.entries()) {
-      if (handle.kind !== 'directory') continue;
-      try {
-        const fh   = await handle.getFileHandle('Pi Quote.html');
-        const text = await (await fh.getFile()).text();
-        entries.push({ name, fh, text });
-      } catch (_) { /* skip folders without Pi Quote.html */ }
-    }
-
-    if (entries.length === 0) { alert('No Pi Quote.html files found in the Customers folder.'); return; }
-
-    // Sort alphabetically by folder name (customer name)
-    entries.sort((a, b) => a.name.localeCompare(b.name));
-
-    // Assign sequential numbers and rewrite each file
-    let counter = QUOTE_START;
-    for (const entry of entries) {
-      // Replace the first 7-digit quote number found in the file
-      const newText = entry.text.replace(QUOTE_NUM_RE, String(counter));
-      const writable = await entry.fh.createWritable();
-      await writable.write(newText);
-      await writable.close();
-      counter++;
-    }
-
-    alert(`✅ Renumbered ${entries.length} quote file${entries.length > 1 ? 's' : ''}.\nRange: ${QUOTE_START} → ${counter - 1}\nNext available: ${counter}`);
-    // Also update the current quote ref to next available
-    document.getElementById('quoteRef').value = String(counter);
-    recalculate();
+    const h = await window.showDirectoryPicker({ id: 'pi-customers', startIn: 'desktop', mode: 'readwrite' });
+    customersHandleCache = h;
+    await storeCustomersHandle(h);
+    updateFolderIndicator(h.name);
   } catch (e) {
-    if (e.name !== 'AbortError') alert('Renumber failed: ' + e.message);
+    if (e.name !== 'AbortError') alert('Could not set folder: ' + e.message);
   }
 }
 
@@ -1965,60 +2008,75 @@ document.getElementById('stcZone').addEventListener('change', () => {
 async function saveQuote() {
   const customerName = document.getElementById('customerName').value.trim();
   if (!customerName) {
-    alert('Please enter a customer name before saving the quote.');
+    alert('Please enter a customer name before saving.');
     document.getElementById('customerName').focus();
     return;
   }
 
+  // Ensure quote ref is a valid number (auto-fill from counter if blank)
+  const refField = document.getElementById('quoteRef');
+  if (!refField.value.trim() || !/^1\d{6}$/.test(refField.value.trim())) {
+    refField.value = String(getNextQuoteNum());
+    recalculate();
+  }
+  const quoteNum = parseInt(refField.value.trim());
+
+  const saveBtn   = document.querySelector('.btn-save');
   const quoteHtml = generateQuoteHTML();
-  const saveBtn = document.querySelector('.btn-save');
 
   try {
     if ('showDirectoryPicker' in window) {
-      // File System Access API — user picks the Customers folder, tool creates subfolder + file
-      const dirHandle = await window.showDirectoryPicker({
-        id: 'pi-customers',   // Chrome remembers this location between sessions
-        startIn: 'desktop',
-        mode: 'readwrite',
-      });
-
-      // Auto-assign quote number if field is empty or not a valid sequential ref
-      const refField = document.getElementById('quoteRef');
-      if (!refField.value.trim() || !/^1\d{6}$/.test(refField.value.trim())) {
-        const last = await scanCustomersForLastQuoteNum(dirHandle);
-        refField.value = String(last + 1);
-        recalculate();
+      // ── Get / (re-)verify the Customers folder handle ──
+      let dirHandle = customersHandleCache;
+      if (!dirHandle) {
+        // First time — show folder picker once, then store for future sessions
+        dirHandle = await window.showDirectoryPicker({ id: 'pi-customers', startIn: 'desktop', mode: 'readwrite' });
+        customersHandleCache = dirHandle;
+        await storeCustomersHandle(dirHandle);
+        updateFolderIndicator(dirHandle.name);
+      } else {
+        // Re-verify permission (Chrome may require one-click after a page reload)
+        const perm = await dirHandle.requestPermission({ mode: 'readwrite' });
+        if (perm !== 'granted') {
+          // Permission denied — clear cache and retry (shows picker once)
+          customersHandleCache = null;
+          return saveQuote();
+        }
       }
 
-      // Create customer subfolder (First Last)
+      // ── Commit quote number to localStorage ──
+      commitQuoteNum(quoteNum);
+
+      // ── Create customer subfolder and write Pi Quote.html ──
       const customerDir = await dirHandle.getDirectoryHandle(customerName, { create: true });
-      // Write Pi Quote.html
-      const fileHandle = await customerDir.getFileHandle('Pi Quote.html', { create: true });
-      const writable = await fileHandle.createWritable();
+      const fileHandle  = await customerDir.getFileHandle('Pi Quote.html', { create: true });
+      const writable    = await fileHandle.createWritable();
       await writable.write(quoteHtml);
       await writable.close();
 
+      // Pre-load next quote number ready for next customer
+      refField.value = String(quoteNum + 1);
+      recalculate();
+
       const original = saveBtn.textContent;
-      saveBtn.textContent = '✅ Saved!';
+      saveBtn.textContent = `✅ Saved! #${quoteNum}`;
       saveBtn.style.background = '#1b5e20';
-      setTimeout(() => { saveBtn.textContent = original; saveBtn.style.background = ''; }, 3000);
+      setTimeout(() => { saveBtn.textContent = original; saveBtn.style.background = ''; }, 3500);
+
     } else {
-      // Fallback: standard browser download
+      // Fallback — standard browser download (non-Chrome / no File System API)
+      commitQuoteNum(quoteNum);
       const blob = new Blob([quoteHtml], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Pi Quote - ${customerName}.html`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = `Pi Quote - ${customerName}.html`;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a); URL.revokeObjectURL(url);
+      refField.value = String(quoteNum + 1);
+      recalculate();
     }
   } catch (err) {
-    if (err.name !== 'AbortError') {
-      console.error('Save failed:', err);
-      alert('Could not save quote: ' + err.message);
-    }
+    if (err.name !== 'AbortError') { console.error('Save failed:', err); alert('Could not save: ' + err.message); }
   }
 }
 
@@ -2123,23 +2181,22 @@ function generateQuoteHTML() {
           demYears, zoneFactor, batteryFactor, year } = stcData;
   const hasSolar   = solarKwForStc > 0;
   const hasBattery = batteryKwhTotal > 0;
-  const stcRate = parseFloat(document.getElementById('stcRate').value) || 0;
+  const stcRateSolar   = parseFloat(document.getElementById('stcRateSolar').value)   || 0;
+  const stcRateBattery = parseFloat(document.getElementById('stcRateBattery').value) || 0;
 
   let stcRebate = 0, stcLabel = '';
+  let useSolarStcs = inverterStcs;
   if (stcOverridden && hasSolar) {
-    const cnt = parseInt(document.getElementById('stcCount').value) || 0;
-    stcRebate = cnt * stcRate;
-    stcLabel  = `${cnt} STCs × $${stcRate.toFixed(0)} (manually overridden)`;
-  } else {
-    const totalStcs = inverterStcs + batteryStcs;
-    stcRebate = totalStcs * stcRate;
-    if (hasSolar && hasBattery)
-      stcLabel = `☀️ ${inverterStcs} + 🔋 ${batteryStcs} = ${totalStcs} STCs × $${stcRate.toFixed(0)}`;
-    else if (hasSolar)
-      stcLabel = `${inverterStcs} solar STCs × $${stcRate.toFixed(0)}`;
-    else if (hasBattery)
-      stcLabel = `${batteryStcs} battery STCs × $${stcRate.toFixed(0)}`;
+    useSolarStcs = parseInt(document.getElementById('stcCount').value) || 0;
   }
+  const solarRebate   = hasSolar   ? useSolarStcs * stcRateSolar   : 0;
+  const batteryRebate = hasBattery ? batteryStcs   * stcRateBattery : 0;
+  stcRebate = solarRebate + batteryRebate;
+
+  const stcParts = [];
+  if (hasSolar)   stcParts.push(`☀️ ${useSolarStcs} solar STCs × $${stcRateSolar.toFixed(0)} = $${solarRebate.toLocaleString('en-AU')}`);
+  if (hasBattery) stcParts.push(`🔋 ${batteryStcs} battery STCs × $${stcRateBattery.toFixed(0)} = $${batteryRebate.toLocaleString('en-AU')}`);
+  stcLabel = stcParts.join('  |  ') + (stcOverridden ? '  ⚠️ solar count manually overridden' : '');
   const oop = Math.max(0, grossInc - stcRebate);
 
   // ── Assemble HTML ──
