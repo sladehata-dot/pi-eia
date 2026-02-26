@@ -805,9 +805,9 @@ const PRODUCTS = [
     category: 'Battery',
     costExGst: 1430,
     suppliers: ['red'],
-    specs: 'Model: EQ4800-M | 4.66kWh | High Voltage | Master unit (required first)',
+    specs: 'Model: EQ4800-M | 4.66kWh nominal | 4.194kWh usable | High Voltage | Master unit (required first)',
     unit: 'module',
-    batteryKwh: 4.66,
+    batteryKwh: 4.194,   // usable kWh per module (used for STC calc)
     defaultIncluded: false,
   },
   {
@@ -816,9 +816,9 @@ const PRODUCTS = [
     category: 'Battery',
     costExGst: 1320,
     suppliers: ['red'],
-    specs: 'Model: EQ4800-S | 4.66kWh | High Voltage | Slave unit (add to Master)',
+    specs: 'Model: EQ4800-S | 4.66kWh nominal | 4.194kWh usable | High Voltage | Slave unit (add to Master)',
     unit: 'module',
-    batteryKwh: 4.66,
+    batteryKwh: 4.194,   // usable kWh per module (used for STC calc)
     defaultIncluded: false,
   },
   // ── HYXIPOWER KITS (AZ Energy) ──
@@ -1134,6 +1134,8 @@ function addProductById(productId, supplierId) {
   lineItems.push(li);
 
   renderTable();
+  // Always clear override when adding a product so STC count reflects the new state
+  if (prod.isSolarPanel || prod.inverterKw || prod.batteryKwh) stcOverridden = false;
   autoCalcStcs();
   recalculate();
 }
@@ -1758,8 +1760,11 @@ function getBatterySolarStcs() {
     }
   });
 
-  // Use panel kW if panels are configured, otherwise fall back to inverter kW
-  const solarKwForStc = panelKwTotal > 0 ? panelKwTotal : inverterKwTotal;
+  // Solar STCs come ONLY from panel capacity (CER rules: inverter-only replacements
+  // do not attract solar STCs). If no panels are in the quote, hasSolar = false.
+  // NOTE: inverterKwTotal is still returned so recalculate() can display inverter kW info,
+  // but it is NOT used to generate solar STCs.
+  const solarKwForStc = panelKwTotal;
   const inverterStcs  = Math.floor(solarKwForStc * zoneFactor * demYears); // CER truncates, does not round
 
   // ── BATTERY STCs ──
