@@ -2127,7 +2127,7 @@ function captureState() {
     marginPct:      parseFloat(document.getElementById('marginPct').value) || 30,
     stcRateSolar:   parseFloat(document.getElementById('stcRateSolar').value) || 38,
     stcRateBattery: parseFloat(document.getElementById('stcRateBattery').value) || 40,
-    zone:           document.getElementById('zoneSelect')?.value || '3',
+    zone:           document.getElementById('stcZone')?.value || '3',   // FIX: was 'zoneSelect'
     stcOverridden,
     stcManualCount: stcOverridden
       ? (parseInt(document.getElementById('stcCount')?.value) || null) : null,
@@ -2148,7 +2148,7 @@ function restoreState(state) {
   document.getElementById('marginPct').value      = state.marginPct      ?? 30;
   document.getElementById('stcRateSolar').value   = state.stcRateSolar   ?? 38;
   document.getElementById('stcRateBattery').value = state.stcRateBattery ?? 40;
-  const zoneEl = document.getElementById('zoneSelect');
+  const zoneEl = document.getElementById('stcZone');           // FIX: was 'zoneSelect'
   if (zoneEl && state.zone) zoneEl.value = state.zone;
 
   (state.lineItems || []).forEach(li => {
@@ -2156,6 +2156,7 @@ function restoreState(state) {
     lineItems.push({ ...li, rowId: `row-${rowCounter}` });
   });
 
+  // Restore manual STC override state
   stcOverridden = !!state.stcOverridden;
   if (stcOverridden && state.stcManualCount !== null) {
     const el = document.getElementById('stcCount');
@@ -2163,10 +2164,36 @@ function restoreState(state) {
   }
 
   renderTable();
-  autoCalcStcs();
-  recalculate();
+  // Run autoCalcStcs() with stcOverridden=false so the STC note always updates,
+  // then restore the override flag if the saved state had one.
+  const savedOverride = stcOverridden;
+  stcOverridden = false;
+  autoCalcStcs();             // updates STC note display + calls recalculate()
+  stcOverridden = savedOverride;
+  if (savedOverride) recalculate(); // re-run with manual count in effect
+
   document.getElementById('openQuotePanel').style.display = 'none';
   window.scrollTo(0, 0);
+
+  // Show brief success banner so the user knows the quote loaded
+  _showLoadToast(state.customerName, state.quoteRef);
+}
+
+function _showLoadToast(customerName, quoteRef) {
+  const existing = document.getElementById('loadToast');
+  if (existing) existing.remove();
+  const toast = document.createElement('div');
+  toast.id = 'loadToast';
+  toast.style.cssText = [
+    'position:fixed;bottom:24px;left:50%;transform:translateX(-50%)',
+    'background:#1b5e20;color:white;padding:10px 22px;border-radius:8px',
+    'font-size:13px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,0.25)',
+    'z-index:9999;pointer-events:none;transition:opacity 0.4s',
+  ].join(';');
+  toast.textContent = `✅ Loaded: ${customerName || '(no name)'} #${quoteRef || '—'}`;
+  document.body.appendChild(toast);
+  setTimeout(() => { toast.style.opacity = '0'; }, 2800);
+  setTimeout(() => { toast.remove(); }, 3300);
 }
 
 // ── Persist recent quotes index to localStorage ──
@@ -2222,25 +2249,39 @@ function loadRecentQuote(stateKey) {
   } catch(e) { alert('Could not load quote: ' + e.message); }
 }
 
+function _fileInputFallback() {
+  // Append to body so the browser doesn't GC it before onchange fires
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = '.json';
+  input.style.display = 'none';
+  document.body.appendChild(input);
+  input.onchange = async () => {
+    document.body.removeChild(input);
+    const file = input.files[0];
+    if (!file) return;
+    try { restoreState(JSON.parse(await file.text())); }
+    catch(e) { alert('Could not read file: ' + e.message); }
+  };
+  input.click();
+}
+
 async function loadQuoteFromFile() {
   if (!('showOpenFilePicker' in window)) {
-    // Fallback: hidden file input
-    const input = document.createElement('input');
-    input.type = 'file'; input.accept = '.json';
-    input.onchange = async () => {
-      const file = input.files[0];
-      if (!file) return;
-      try { restoreState(JSON.parse(await file.text())); }
-      catch(e) { alert('Could not read file: ' + e.message); }
-    };
-    input.click(); return;
+    _fileInputFallback(); return;
   }
   try {
-    const [fh]  = await window.showOpenFilePicker({ types: [{ description: 'Pi Quote JSON', accept: { 'application/json': ['.json'] } }] });
+    const [fh]  = await window.showOpenFilePicker({
+      types: [{ description: 'Pi Quote State JSON', accept: { 'application/json': ['.json'] } }],
+    });
     const file  = await fh.getFile();
     const state = JSON.parse(await file.text());
     restoreState(state);
-  } catch(e) { if (e.name !== 'AbortError') alert('Could not open file: ' + e.message); }
+  } catch(e) {
+    if (e.name === 'AbortError') return;          // user cancelled — silent
+    // showOpenFilePicker can fail on file:// origins or restricted contexts;
+    // fall through to the input-based picker which always works
+    _fileInputFallback();
+  }
 }
 
 function clearRecentQuotes() {
