@@ -1010,6 +1010,7 @@ function addProductById(productId, supplierId) {
     li.tilePanels     = null;    // panels on tile — null = auto (use total qty)
     li.mountTilt      = false;   // tilt mount (tin roof) enabled
     li.tiltPanels     = null;    // panels on tilt — null = auto (use total qty)
+    li.tiltSamePanels = false;   // true = derive tilt panel count from tile (same physical panels)
     // legs = panels_on_tilt + 1 (auto-calculated, no manual input)
     li.tiltExtraRate  = 15;      // extra per-panel rate for tilt ($, default $15)
   }
@@ -1154,8 +1155,13 @@ function mountingCalc(li) {
   }
 
   if (li.mountTilt) {
-    tiltPanelsUsed = (li.tiltPanels !== null && li.tiltPanels !== undefined && li.tiltPanels !== '')
-      ? (parseInt(li.tiltPanels) || 0) : totalPanels;
+    // "Same panels as tile" mode: derive tilt count from tile's already-calculated count
+    if (li.tiltSamePanels && li.mountTile) {
+      tiltPanelsUsed = tilePanelsUsed;  // mirror tile's value (calculated above)
+    } else {
+      tiltPanelsUsed = (li.tiltPanels !== null && li.tiltPanels !== undefined && li.tiltPanels !== '')
+        ? (parseInt(li.tiltPanels) || 0) : totalPanels;
+    }
     tiltUnits    = Math.ceil(tiltPanelsUsed / 6);
     tiltBaseCost = tiltUnits * 89.90;
     // Legs = panels on tilt + 1 (one leg per panel plus one extra at end)
@@ -1443,13 +1449,27 @@ function renderTable() {
                 <span style="font-weight:400;color:#546e7a;font-size:11px;">$89.90/unit · 1 per 6 panels</span>
               </label>
               ${li.mountTilt ? `
+              ${li.mountTile ? `
+              <div style="margin-top:5px;padding-left:20px;">
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:#37474f;">
+                  <input type="checkbox" ${li.tiltSamePanels ? 'checked' : ''}
+                    onchange="updateSolarMounting('${li.rowId}','tiltSamePanels',this.checked)">
+                  Same panels as tile
+                  <span style="color:#90a4ae;font-size:11px;">(legs only — no separate count needed)</span>
+                </label>
+              </div>` : ''}
+              ${!li.tiltSamePanels ? `
               <div style="display:flex;align-items:center;gap:7px;margin-top:6px;padding-left:20px;flex-wrap:wrap;font-size:12px;">
                 <label style="color:#37474f;">Panels on tilt:</label>
                 <input type="number" min="0" max="${li.qty}" step="1" value="${tiltPanelVal}"
                   style="width:58px;padding:3px 6px;border:1.5px solid #90a4ae;border-radius:4px;font-size:12px;text-align:right;background:white;"
                   oninput="updateSolarMounting('${li.rowId}','tiltPanels',this.value)">
                 <span style="color:#37474f;">→ ${mc.tiltUnits} units = <strong>$${mc.tiltBaseCost.toFixed(2)}</strong></span>
-              </div>
+              </div>` : `
+              <div style="margin-top:4px;padding-left:20px;font-size:11px;color:#546e7a;">
+                ${mc.tiltUnits} unit${mc.tiltUnits !== 1 ? 's' : ''} × $89.90 = <strong style="color:#37474f;">$${mc.tiltBaseCost.toFixed(2)}</strong>
+                <span style="color:#b0bec5;margin-left:3px;">(${mc.tiltPanelsUsed} panels from tile)</span>
+              </div>`}
               <div style="display:flex;align-items:center;gap:7px;margin-top:4px;padding-left:20px;flex-wrap:wrap;font-size:12px;">
                 <label style="color:#37474f;">Legs (auto):</label>
                 <span style="background:#eceff1;border:1px solid #b0bec5;border-radius:4px;padding:3px 8px;font-size:12px;color:#37474f;">
@@ -1528,6 +1548,9 @@ function updateSolarMounting(rowId, field, val) {
       if (field === 'mountTile') li.tilePanels = null;
       if (field === 'mountTilt') { li.tiltPanels = null; }
     }
+  } else if (field === 'tiltSamePanels') {
+    li.tiltSamePanels = !!val;
+    if (li.tiltSamePanels) li.tiltPanels = null; // clear manual count when linking to tile
   } else if (field === 'tilePanels' || field === 'tiltPanels') {
     li[field] = val === '' ? null : (parseInt(val) || 0);
   } else if (field === 'tiltExtraRate') {
