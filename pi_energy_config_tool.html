@@ -1155,21 +1155,27 @@ function mountingCalc(li) {
   }
 
   if (li.mountTilt) {
-    // "Same panels as tile" mode: derive tilt count from tile's already-calculated count
     if (li.tiltSamePanels && li.mountTile) {
-      tiltPanelsUsed = tilePanelsUsed;  // mirror tile's value (calculated above)
+      // "Same panels as tile" — legs ONLY; panels on tile already provide attachment.
+      // No tilt frame units, no extra per-panel charge.
+      tiltPanelsUsed = tilePanelsUsed;   // mirror tile's already-calculated count
+      tiltUnits      = 0;
+      tiltBaseCost   = 0;
+      tiltLegCount   = tiltPanelsUsed + 1;
+      tiltLegCost    = tiltLegCount * 9.90;
+      tiltExtraCost  = 0;
     } else {
       tiltPanelsUsed = (li.tiltPanels !== null && li.tiltPanels !== undefined && li.tiltPanels !== '')
         ? (parseInt(li.tiltPanels) || 0) : totalPanels;
+      tiltUnits    = Math.ceil(tiltPanelsUsed / 6);
+      tiltBaseCost = tiltUnits * 89.90;
+      // Legs = panels on tilt + 1 (one leg per panel plus one extra at end)
+      tiltLegCount = tiltPanelsUsed + 1;
+      tiltLegCost  = tiltLegCount * 9.90;
+      const extraRate = (li.tiltExtraRate !== undefined && li.tiltExtraRate !== null)
+        ? (parseFloat(li.tiltExtraRate) || 0) : 15;
+      tiltExtraCost = tiltPanelsUsed * extraRate;
     }
-    tiltUnits    = Math.ceil(tiltPanelsUsed / 6);
-    tiltBaseCost = tiltUnits * 89.90;
-    // Legs = panels on tilt + 1 (one leg per panel plus one extra at end)
-    tiltLegCount = tiltPanelsUsed + 1;
-    tiltLegCost  = tiltLegCount * 9.90;
-    const extraRate = (li.tiltExtraRate !== undefined && li.tiltExtraRate !== null)
-      ? (parseFloat(li.tiltExtraRate) || 0) : 15;
-    tiltExtraCost = tiltPanelsUsed * extraRate;
   }
 
   const totalMountingCost = tileCost + tiltBaseCost + tiltLegCost + tiltExtraCost;
@@ -1467,8 +1473,7 @@ function renderTable() {
                 <span style="color:#37474f;">→ ${mc.tiltUnits} units = <strong>$${mc.tiltBaseCost.toFixed(2)}</strong></span>
               </div>` : `
               <div style="margin-top:4px;padding-left:20px;font-size:11px;color:#546e7a;">
-                ${mc.tiltUnits} unit${mc.tiltUnits !== 1 ? 's' : ''} × $89.90 = <strong style="color:#37474f;">$${mc.tiltBaseCost.toFixed(2)}</strong>
-                <span style="color:#b0bec5;margin-left:3px;">(${mc.tiltPanelsUsed} panels from tile)</span>
+                <span style="color:#b0bec5;">Legs only</span> — ${mc.tiltPanelsUsed} panels from tile · no frame units charged
               </div>`}
               <div style="display:flex;align-items:center;gap:7px;margin-top:4px;padding-left:20px;flex-wrap:wrap;font-size:12px;">
                 <label style="color:#37474f;">Legs (auto):</label>
@@ -1477,11 +1482,12 @@ function renderTable() {
                   <span style="color:#90a4ae;font-size:11px;">(${mc.tiltPanelsUsed} panels + 1)</span>
                 </span>
                 <span style="color:#37474f;">× $9.90 = <strong>$${mc.tiltLegCost.toFixed(2)}</strong></span>
+                ${!li.tiltSamePanels ? `
                 <span style="margin-left:6px;color:#37474f;">Extra $/panel:</span>
                 <input type="number" min="0" step="0.5" value="${tiltExtraRate}"
                   style="width:60px;padding:3px 6px;border:1.5px solid #90a4ae;border-radius:4px;font-size:12px;text-align:right;background:white;"
                   oninput="updateSolarMounting('${li.rowId}','tiltExtraRate',this.value)">
-                <span style="color:#37474f;">× ${mc.tiltPanelsUsed} panels = <strong>$${mc.tiltExtraCost.toFixed(2)}</strong></span>
+                <span style="color:#37474f;">× ${mc.tiltPanelsUsed} panels = <strong>$${mc.tiltExtraCost.toFixed(2)}</strong></span>` : ''}
               </div>` : ''}
             </div>
 
@@ -2162,12 +2168,14 @@ function generateQuoteHTML() {
           <td style="padding:3px 10px;text-align:right;color:#5d4037;font-size:11px;">${fmt(mc.tileCost)}</td>
         </tr>`;
 
-      if (mc.tiltBaseCost + mc.tiltLegCost + mc.tiltExtraCost > 0) subRows += `
+      if (mc.tiltLegCost > 0 || mc.tiltBaseCost > 0) subRows += `
         <tr style="background:#f5faf5;">
           <td style="padding:3px 10px 3px 30px;color:#37474f;font-size:11px;" colspan="2">
-            🏗️ Tilt Mounting — ${mc.tiltUnits} unit${mc.tiltUnits > 1 ? 's' : ''} × $89.90
+            🏗️ Tilt Mounting — ${li.tiltSamePanels && li.mountTile
+              ? `Legs only (same panels as tile) — ${mc.tiltLegCount} legs (${mc.tiltPanelsUsed} + 1) × $9.90`
+              : `${mc.tiltUnits} unit${mc.tiltUnits > 1 ? 's' : ''} × $89.90
             + ${mc.tiltLegCount} legs (${mc.tiltPanelsUsed} panels + 1) × $9.90
-            ${mc.tiltExtraCost > 0 ? ` + $${li.tiltExtraRate || 15}/panel × ${mc.tiltPanelsUsed} panels` : ''}</td>
+            ${mc.tiltExtraCost > 0 ? ` + $${li.tiltExtraRate || 15}/panel × ${mc.tiltPanelsUsed} panels` : ''}`}</td>
           <td style="padding:3px 10px;text-align:right;color:#37474f;font-size:11px;">${fmt(mc.tiltBaseCost + mc.tiltLegCost + mc.tiltExtraCost)}</td>
         </tr>`;
     } else {
