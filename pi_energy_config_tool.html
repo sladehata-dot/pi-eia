@@ -813,6 +813,19 @@ const PRODUCTS = [
     defaultIncluded: false,
     costEditable: true,      // user types actual freight cost
   },
+  // ── REMOVE PANEL ──
+  {
+    id: 'remove-panel',
+    name: 'Remove Panel',
+    category: 'Labour',
+    costExGst: 15,           // $15 per panel default — editable per quote
+    suppliers: ['pi'],
+    specs: 'Panel removal — qty auto-fills from system panel count',
+    unit: 'panel',
+    defaultIncluded: false,
+    costEditable: true,      // rate per panel is editable
+    autoQtyFromPanels: true, // qty defaults to the system's total panel count when added
+  },
 ];
 
 // ── SOLAR INVERTER STC SETTINGS ──
@@ -994,9 +1007,19 @@ function addProductById(productId, supplierId) {
 
   rowCounter++;
   const rowId = `row-${rowCounter}`;
+
+  // Auto-qty: count total panels already in the system (for products like "Remove Panel")
+  let defaultQty = 1;
+  if (prod.autoQtyFromPanels) {
+    defaultQty = lineItems.reduce((sum, l) => {
+      const p = PRODUCTS.find(x => x.id === l.productId);
+      return sum + (p && p.isSolarPanel ? (parseInt(l.qty) || 0) : 0);
+    }, 0) || 1;
+  }
+
   const li = {
-    rowId, productId, supplierId, qty: 1,
-    customCost: prod.costEditable ? 0 : null,
+    rowId, productId, supplierId, qty: defaultQty,
+    customCost: prod.costEditable ? prod.costExGst : null,
   };
   // Solar panel extra state
   if (prod.isSolarPanel) {
@@ -1305,15 +1328,20 @@ function renderTable() {
       return `<option value="${sid}" ${sid === li.supplierId ? 'selected' : ''}>${sup.name}</option>`;
     }).join('');
 
-    // Cost cell
+    // Cost cell — all non-solar products show an editable input; overridden values get a reset link
     let costCell;
+    const isOverridden = !prod.isSolarPanel && li.customCost !== null && li.customCost !== prod.costExGst;
+    const resetLink = isOverridden
+      ? `<br><button onclick="resetCatalogueCost('${li.rowId}')"
+           title="Reset to catalogue price $${prod.costExGst.toLocaleString('en-AU',{minimumFractionDigits:2})}"
+           style="font-size:10px;color:#e65100;background:none;border:none;cursor:pointer;padding:0;margin-top:2px;">
+           ↩ reset $${prod.costExGst.toLocaleString('en-AU',{minimumFractionDigits:2})}</button>` : '';
     if (prod.isSolarPanel) {
       costCell = `<span style="font-size:12px;color:#aaa;">see below</span>`;
-    } else if (prod.costEditable) {
-      costCell = `<input class="cost-input" type="number" min="0" step="10" value="${costEx}"
-                    onchange="updateCustomCost('${li.rowId}', this.value)">`;
     } else {
-      costCell = `$${costEx.toLocaleString('en-AU', {minimumFractionDigits:2})}`;
+      costCell = `<input class="cost-input" type="number" min="0" step="1" value="${costEx}"
+                    style="${isOverridden ? 'border-color:#e65100;color:#e65100;' : ''}"
+                    onchange="updateCustomCost('${li.rowId}', this.value)">${resetLink}`;
     }
 
     // Main product row
@@ -1543,7 +1571,17 @@ function updateSupplier(rowId, val) {
 
 function updateCustomCost(rowId, val) {
   const li = lineItems.find(l => l.rowId === rowId);
-  if (li) li.customCost = parseFloat(val) || 0;
+  if (!li) return;
+  li.customCost = parseFloat(val) ?? 0;
+  renderTable();
+  recalculate();
+}
+
+// Reset an overridden catalogue cost back to the product's default
+function resetCatalogueCost(rowId) {
+  const li = lineItems.find(l => l.rowId === rowId);
+  if (!li) return;
+  li.customCost = null;   // null = use prod.costExGst
   renderTable();
   recalculate();
 }
