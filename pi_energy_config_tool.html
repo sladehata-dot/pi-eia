@@ -2048,10 +2048,10 @@ async function saveQuote() {
   }
   const quoteNum = parseInt(refField.value.trim());
 
-  const saveBtn   = document.querySelector('.btn-save');
-  const quoteHtml = generateQuoteHTML();
+  const saveBtn = document.querySelector('.btn-save');
 
   try {
+    const quoteHtml = generateQuoteHTML();
     if ('showDirectoryPicker' in window) {
       // ── Get / (re-)verify the Customers folder handle ──
       let dirHandle = customersHandleCache;
@@ -2334,8 +2334,8 @@ function generateQuoteHTML() {
 ${(hasSolar || hasBattery) ? `
 <div class="stc-note">
   <strong>STC Calculation Detail:</strong><br>
-  ${hasSolar ? `☀️ Solar: ${solarKwForStc.toFixed(2)}kW × zone factor (${zoneFactor}) × ${demYears} deeming years = <strong>${inverterStcs} STCs</strong> @ $${solarRate.toFixed(0)}/STC. ` : ''}
-  ${hasBattery ? `🔋 Battery: ${batteryKwhTotal.toFixed(2)}kWh × ${batteryFactor} (${year} CER flat rate, no zone) = <strong>${batteryStcs} STCs</strong> @ $${batteryRate.toFixed(0)}/STC (govt clearing house).` : ''}
+  ${hasSolar ? `☀️ Solar: ${solarKwForStc.toFixed(2)}kW × zone factor (${zoneFactor}) × ${demYears} deeming years = <strong>${inverterStcs} STCs</strong> @ $${stcRateSolar.toFixed(0)}/STC. ` : ''}
+  ${hasBattery ? `🔋 Battery: ${batteryKwhTotal.toFixed(2)}kWh × ${batteryFactor} (${year} CER flat rate, no zone) = <strong>${batteryStcs} STCs</strong> @ $${stcRateBattery.toFixed(0)}/STC (govt clearing house).` : ''}
 </div>` : ''}
 
 <div class="footer">
