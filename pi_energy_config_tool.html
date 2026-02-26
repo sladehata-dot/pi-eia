@@ -583,8 +583,8 @@
           </div>
           <div class="stc-calc-note" id="stcCalcNote">Add products to calculate</div>
 
-          <!-- ☀️ Solar STC rate (shown when solar panels/inverter present) -->
-          <div class="ctrl-row" style="margin-top:6px;display:none;" id="stcSolarRateRow">
+          <!-- ☀️ Solar STC rate -->
+          <div class="ctrl-row" style="margin-top:6px;" id="stcSolarRateRow">
             <label>☀️ Solar rate ($)</label>
             <div style="display:flex;align-items:center;gap:4px;">
               <button onclick="setStcRateSolar(38)" id="stcSolarBtn38"
@@ -598,8 +598,8 @@
             </div>
           </div>
 
-          <!-- 🔋 Battery STC rate (shown when battery present) -->
-          <div class="ctrl-row" style="margin-top:4px;display:none;" id="stcBatteryRateRow">
+          <!-- 🔋 Battery STC rate -->
+          <div class="ctrl-row" style="margin-top:4px;" id="stcBatteryRateRow">
             <label>🔋 Battery rate ($)</label>
             <div style="display:flex;align-items:center;gap:4px;">
               <button onclick="setStcRateBattery(40)" id="stcBatteryBtn40"
@@ -1407,9 +1407,12 @@ function renderTable() {
       trMount.style.background = '#eceff1';
       trMount.style.borderBottom = '2px solid #b0bec5';
 
-      const tiltExtraRate = li.tiltExtraRate !== undefined ? li.tiltExtraRate : 15;
-      const tilePanelVal  = li.tilePanels !== null && li.tilePanels !== undefined ? li.tilePanels : li.qty;
-      const tiltPanelVal  = li.tiltPanels !== null && li.tiltPanels !== undefined ? li.tiltPanels : li.qty;
+      const tiltExtraRate  = li.tiltExtraRate !== undefined ? li.tiltExtraRate : 15;
+      const tilePanelVal   = li.tilePanels !== null && li.tilePanels !== undefined ? li.tilePanels : li.qty;
+      const tiltPanelVal   = li.tiltPanels !== null && li.tiltPanels !== undefined ? li.tiltPanels : li.qty;
+      // If both tile AND tilt are checked and their panel counts match, suppress the
+      // redundant "Panels on tilt" input — only show the legs row (user already set count via tile)
+      const tiltSameAsTile = li.mountTile && li.mountTilt && (mc.tiltPanelsUsed === mc.tilePanelsUsed);
 
       trMount.innerHTML = `
         <td colspan="7" style="padding:6px 12px 10px 28px;">
@@ -1443,13 +1446,18 @@ function renderTable() {
                 <span style="font-weight:400;color:#546e7a;font-size:11px;">$89.90/unit · 1 per 6 panels</span>
               </label>
               ${li.mountTilt ? `
+              ${!tiltSameAsTile ? `
               <div style="display:flex;align-items:center;gap:7px;margin-top:6px;padding-left:20px;flex-wrap:wrap;font-size:12px;">
                 <label style="color:#37474f;">Panels on tilt:</label>
                 <input type="number" min="0" max="${li.qty}" step="1" value="${tiltPanelVal}"
                   style="width:58px;padding:3px 6px;border:1.5px solid #90a4ae;border-radius:4px;font-size:12px;text-align:right;background:white;"
                   oninput="updateSolarMounting('${li.rowId}','tiltPanels',this.value)">
                 <span style="color:#37474f;">→ ${mc.tiltUnits} units = <strong>$${mc.tiltBaseCost.toFixed(2)}</strong></span>
-              </div>
+              </div>` : `
+              <div style="margin-top:5px;padding-left:20px;font-size:11px;color:#546e7a;">
+                ${mc.tiltUnits} unit${mc.tiltUnits !== 1 ? 's' : ''} × $89.90 = <strong>$${mc.tiltBaseCost.toFixed(2)}</strong>
+                <span style="color:#90a4ae;margin-left:4px;">(${mc.tiltPanelsUsed} panels — same as tile)</span>
+              </div>`}
               <div style="display:flex;align-items:center;gap:7px;margin-top:4px;padding-left:20px;flex-wrap:wrap;font-size:12px;">
                 <label style="color:#37474f;">Legs (auto):</label>
                 <span style="background:#eceff1;border:1px solid #b0bec5;border-radius:4px;padding:3px 8px;font-size:12px;color:#37474f;">
@@ -1637,9 +1645,7 @@ function autoCalcStcs() {
   // ── Show/hide zone selector (solar only) ──
   document.getElementById('zoneRow').style.display = hasSolar ? 'flex' : 'none';
 
-  // Show solar rate row only when solar is present; battery rate row only when battery present
-  document.getElementById('stcSolarRateRow').style.display   = hasSolar   ? 'flex' : 'none';
-  document.getElementById('stcBatteryRateRow').style.display = hasBattery ? 'flex' : 'none';
+  // STC rate rows are always visible — amounts update as products are added
 
   // ── Lock STC count field when battery-only ──
   const stcInput = document.getElementById('stcCount');
