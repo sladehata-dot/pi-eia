@@ -621,8 +621,9 @@
 
       <!-- Save quote footer -->
       <div style="margin-top:16px;padding-top:14px;border-top:2px solid #f0f4f8;">
-        <!-- Folder indicator row -->
+        <!-- Folder / server indicator row -->
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:12px;">
+          <span id="serverIndicator" style="display:none;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:4px;padding:2px 7px;color:#2e7d32;font-weight:600;font-size:11px;">⚡ Save Server</span>
           <span style="color:#9aa5b4;">📁 Customers folder:</span>
           <span id="folderIndicator" style="color:#e65100;font-weight:600;">Not set — will prompt on first save</span>
           <button id="btnChangeFolder" onclick="changeCustomersFolder()"
@@ -959,6 +960,19 @@ document.addEventListener('DOMContentLoaded', () => {
       updateFolderIndicator(handle.name);
     }
   });
+
+  // Ping local save-server — show indicator if running (pi-save-server.js)
+  fetch('http://127.0.0.1:3737/ping', { signal: AbortSignal.timeout(400) })
+    .then(r => r.ok && r.json())
+    .then(data => {
+      if (data && data.ok) {
+        const ind = document.getElementById('serverIndicator');
+        if (ind) { ind.style.display = 'inline'; ind.title = 'Save server running — saving directly to: ' + data.root; }
+        const fi = document.getElementById('folderIndicator');
+        if (fi) { fi.textContent = data.root.split(/[\\/]/).pop() || data.root; fi.style.color = '#2e7d32'; }
+      }
+    })
+    .catch(() => { /* server not running — that's fine, use picker */ });
 
   // Set STC alert
   updateStcAlert();
@@ -2124,60 +2138,330 @@ async function saveQuote() {
   const saveBtn = document.querySelector('.btn-save');
 
   try {
-    const quoteHtml = generateQuoteHTML();
+    const quoteHtml    = generateQuoteHTML();
+    const customerHtml = generateCustomerQuoteHTML();
+
+    // ── Try local save-server first (pi-save-server.js on port 3737) ──
+    // If running, saves directly to filesystem — no picker, no prompts.
+    let usedServer = false;
+    try {
+      const ping = await fetch('http://127.0.0.1:3737/ping', { signal: AbortSignal.timeout(400) });
+      if (ping.ok) {
+        const res = await fetch('http://127.0.0.1:3737/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customerName,
+            files: [
+              { name: 'Pi Quote.html',      content: quoteHtml    },
+              { name: 'Customer Copy.html', content: customerHtml },
+            ]
+          })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          commitQuoteNum(quoteNum);
+          refField.value = String(quoteNum + 1);
+          recalculate();
+          const original = saveBtn.textContent;
+          saveBtn.textContent = `✅ Saved! #${quoteNum} (both copies)`;
+          saveBtn.style.background = '#1b5e20';
+          setTimeout(() => { saveBtn.textContent = original; saveBtn.style.background = ''; }, 3500);
+          usedServer = true;
+        }
+      }
+    } catch (_) { /* server not running — fall through to picker */ }
+
+    if (usedServer) return;
+
     if ('showDirectoryPicker' in window) {
       // ── Get / (re-)verify the Customers folder handle ──
       let dirHandle = customersHandleCache;
       if (!dirHandle) {
-        // First time — show folder picker once, then store for future sessions
         dirHandle = await window.showDirectoryPicker({ id: 'pi-customers', startIn: 'desktop', mode: 'readwrite' });
         customersHandleCache = dirHandle;
         await storeCustomersHandle(dirHandle);
         updateFolderIndicator(dirHandle.name);
       } else {
-        // Re-verify permission (Chrome may require one-click after a page reload)
         const perm = await dirHandle.requestPermission({ mode: 'readwrite' });
         if (perm !== 'granted') {
-          // Permission denied — clear cache and retry (shows picker once)
           customersHandleCache = null;
           return saveQuote();
         }
       }
 
-      // ── Commit quote number to localStorage ──
       commitQuoteNum(quoteNum);
 
-      // ── Create customer subfolder and write Pi Quote.html ──
+      // ── Write both files into customer subfolder ──
       const customerDir = await dirHandle.getDirectoryHandle(customerName, { create: true });
-      const fileHandle  = await customerDir.getFileHandle('Pi Quote.html', { create: true });
-      const writable    = await fileHandle.createWritable();
-      await writable.write(quoteHtml);
-      await writable.close();
 
-      // Pre-load next quote number ready for next customer
+      // Internal copy
+      const intHandle  = await customerDir.getFileHandle('Pi Quote.html', { create: true });
+      const intWrite   = await intHandle.createWritable();
+      await intWrite.write(quoteHtml);
+      await intWrite.close();
+
+      // Customer copy
+      const custHandle = await customerDir.getFileHandle('Customer Copy.html', { create: true });
+      const custWrite  = await custHandle.createWritable();
+      await custWrite.write(customerHtml);
+      await custWrite.close();
+
       refField.value = String(quoteNum + 1);
       recalculate();
 
       const original = saveBtn.textContent;
-      saveBtn.textContent = `✅ Saved! #${quoteNum}`;
+      saveBtn.textContent = `✅ Saved! #${quoteNum} (both copies)`;
       saveBtn.style.background = '#1b5e20';
       setTimeout(() => { saveBtn.textContent = original; saveBtn.style.background = ''; }, 3500);
 
     } else {
-      // Fallback — standard browser download (non-Chrome / no File System API)
+      // Fallback — trigger two downloads
       commitQuoteNum(quoteNum);
-      const blob = new Blob([quoteHtml], { type: 'text/html' });
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement('a');
-      a.href = url; a.download = `Pi Quote - ${customerName}.html`;
-      document.body.appendChild(a); a.click();
-      document.body.removeChild(a); URL.revokeObjectURL(url);
+      const dl = (html, filename) => {
+        const blob = new Blob([html], { type: 'text/html' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href = url; a.download = filename;
+        document.body.appendChild(a); a.click();
+        document.body.removeChild(a); URL.revokeObjectURL(url);
+      };
+      dl(quoteHtml,    `Pi Quote - ${customerName}.html`);
+      dl(customerHtml, `Customer Copy - ${customerName}.html`);
       refField.value = String(quoteNum + 1);
       recalculate();
     }
   } catch (err) {
     if (err.name !== 'AbortError') { console.error('Save failed:', err); alert('Could not save: ' + err.message); }
   }
+}
+
+// ═══════════════════════════════════════════════════
+// CUSTOMER COPY — clean sell-price proposal (no cost workings)
+// ═══════════════════════════════════════════════════
+function generateCustomerQuoteHTML() {
+  const fmt     = (n) => '$' + n.toLocaleString('en-AU', {minimumFractionDigits:2, maximumFractionDigits:2});
+  const fmtInc  = (n) => '$' + (n * 1.10).toLocaleString('en-AU', {minimumFractionDigits:2, maximumFractionDigits:2});
+  const customerName = document.getElementById('customerName').value.trim() || 'Valued Customer';
+  const quoteRef     = document.getElementById('quoteRef').value.trim() || '—';
+  const quoteDate    = document.getElementById('quoteDate').value || new Date().toISOString().split('T')[0];
+  const marginPct    = parseFloat(document.getElementById('marginPct').value) || 0;
+  const multiplier   = 1 + marginPct / 100;
+
+  // ── Compute per-line sell prices ──
+  let totalCostEx = 0;
+  let lineRows    = '';
+  let solarKwSum  = 0;
+  let batteryKwhSum = 0;
+
+  lineItems.forEach(li => {
+    let costEx = 0, lineLabel = '', lineDesc = '', lineQty = li.qty;
+
+    if (li.isCustom) {
+      costEx    = (li.customCost || 0) * li.qty;
+      lineLabel = li.customName || 'Additional Service';
+      lineDesc  = '';
+    } else {
+      const prod = PRODUCTS.find(p => p.id === li.productId);
+      if (!prod) return;
+
+      if (prod.isSolarPanel) {
+        const calc = solarPanelCalc(li);
+        const mc   = mountingCalc(li);
+        costEx     = solarLineTotalEx(li);
+        solarKwSum += calc.systemKw;
+        lineLabel  = `Solar PV System — ${calc.systemKw.toFixed(2)}kW`;
+        lineDesc   = `${li.qty} × ${li.panelW}W panels · supply &amp; install${li.mountTile || li.mountTilt ? ' · mounting hardware included' : ''}`;
+        lineQty    = 1;   // show as single system line
+      } else {
+        const c   = li.customCost !== null ? li.customCost : prod.costExGst;
+        costEx    = c * li.qty;
+        lineLabel = prod.name;
+        lineDesc  = prod.specs;
+        if (prod.batteryKwh) batteryKwhSum += prod.batteryKwh * li.qty;
+      }
+    }
+
+    totalCostEx += costEx;
+    const sellEx  = costEx * multiplier;
+    const sellInc = sellEx * 1.10;
+
+    lineRows += `
+      <tr>
+        <td class="item-cell">
+          <strong>${lineLabel}</strong>
+          ${lineDesc ? `<div class="item-desc">${lineDesc}</div>` : ''}
+        </td>
+        <td class="qty-cell">${lineQty}</td>
+        <td class="price-cell">${fmt(sellInc)}</td>
+      </tr>`;
+  });
+
+  // ── Totals ──
+  const sellPriceEx = totalCostEx * multiplier;
+  const gstAmt      = sellPriceEx * 0.10;
+  const grossInc    = sellPriceEx * 1.10;
+
+  const stcData = getBatterySolarStcs();
+  const { inverterStcs, batteryStcs, solarKwForStc, batteryKwhTotal } = stcData;
+  const hasSolar   = solarKwForStc > 0;
+  const hasBattery = batteryKwhTotal > 0;
+  const stcRateSolar   = parseFloat(document.getElementById('stcRateSolar').value)   || 0;
+  const stcRateBattery = parseFloat(document.getElementById('stcRateBattery').value) || 0;
+  let stcOverriddenNow = stcOverridden && hasSolar;
+  const useSolarStcs   = stcOverriddenNow ? (parseInt(document.getElementById('stcCount').value) || 0) : inverterStcs;
+  const solarRebate    = hasSolar   ? useSolarStcs * stcRateSolar   : 0;
+  const batteryRebate  = hasBattery ? batteryStcs   * stcRateBattery : 0;
+  const totalRebate    = solarRebate + batteryRebate;
+  const oop            = Math.max(0, grossInc - totalRebate);
+
+  // ── System summary badge ──
+  const systemBadgeParts = [];
+  if (solarKwSum > 0)   systemBadgeParts.push(`☀️ ${solarKwSum.toFixed(2)}kW Solar`);
+  if (batteryKwhSum > 0) systemBadgeParts.push(`🔋 ${batteryKwhSum.toFixed(1)}kWh Battery Storage`);
+  const systemBadge = systemBadgeParts.join('&nbsp;&nbsp;·&nbsp;&nbsp;');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Solar &amp; Battery Proposal — ${customerName}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a2332; background: #fff; padding: 36px; max-width: 860px; margin: 0 auto; }
+
+  .hdr { background: linear-gradient(135deg, #0a2d4e 0%, #1565c0 100%); color: white; padding: 26px 30px; border-radius: 12px; margin-bottom: 24px; }
+  .hdr h1 { font-size: 22px; font-weight: 700; margin-bottom: 3px; }
+  .hdr .sub { font-size: 12px; opacity: 0.75; }
+  .hdr-row { display: flex; justify-content: space-between; align-items: flex-start; }
+  .hdr-meta { text-align: right; font-size: 12px; opacity: 0.85; line-height: 1.8; }
+  .hdr-meta strong { font-size: 15px; display: block; margin-top: 4px; }
+
+  .system-banner { background: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 8px; padding: 12px 18px; margin-bottom: 20px; font-size: 14px; font-weight: 600; color: #2e7d32; text-align: center; letter-spacing: 0.3px; }
+
+  .to-box { background: #f5f8fc; border-radius: 8px; padding: 14px 18px; margin-bottom: 22px; font-size: 13px; }
+  .to-box .label { font-size: 10px; font-weight: 700; color: #7a8a9e; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .to-box .name  { font-size: 17px; font-weight: 700; color: #1a2332; }
+  .to-box .meta  { color: #7a8a9e; margin-top: 3px; }
+
+  table { width: 100%; border-collapse: collapse; margin-bottom: 22px; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 6px rgba(0,0,0,0.07); }
+  thead th { background: #0a2d4e; color: white; padding: 11px 14px; font-size: 12px; font-weight: 600; text-align: left; }
+  thead th.price-cell { text-align: right; }
+  thead th.qty-cell   { text-align: center; width: 60px; }
+  tbody tr:nth-child(even) { background: #fafbfd; }
+  tbody tr:hover { background: #f0f4f8; }
+  .item-cell  { padding: 12px 14px; border-bottom: 1px solid #edf1f7; }
+  .qty-cell   { padding: 12px 14px; border-bottom: 1px solid #edf1f7; text-align: center; color: #7a8a9e; font-size: 13px; }
+  .price-cell { padding: 12px 14px; border-bottom: 1px solid #edf1f7; text-align: right; font-weight: 600; font-size: 14px; }
+  .item-desc  { font-size: 11px; color: #9aa5b4; margin-top: 3px; font-weight: 400; }
+  tfoot td { padding: 11px 14px; font-weight: 700; background: #f0f4f8; font-size: 13px; }
+  tfoot .price-cell { font-size: 15px; color: #1565c0; }
+
+  .pricing-box { background: #f5f8fc; border-radius: 8px; padding: 18px 22px; margin-bottom: 18px; }
+  .pricing-box h3 { font-size: 10px; font-weight: 700; color: #7a8a9e; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+  .prow { display: flex; justify-content: space-between; align-items: baseline; padding: 5px 0; border-bottom: 1px solid #eaeef3; font-size: 13px; }
+  .prow:last-child { border-bottom: none; }
+  .prow .lbl { color: #5a6a7e; }
+  .prow .val { font-weight: 600; }
+  .prow.rebate .lbl { color: #2e7d32; font-weight: 600; }
+  .prow.rebate .val { color: #2e7d32; font-size: 15px; }
+  .prow.gst   .lbl { color: #9aa5b4; font-size: 12px; }
+  .prow.gst   .val { color: #9aa5b4; font-size: 12px; }
+
+  .oop-bar { background: linear-gradient(135deg, #0a2d4e 0%, #1565c0 100%); color: white; border-radius: 10px; padding: 20px 26px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; }
+  .oop-bar .lbl { font-size: 15px; font-weight: 600; opacity: 0.9; }
+  .oop-bar .sub { font-size: 11px; opacity: 0.65; margin-top: 2px; }
+  .oop-bar .val { font-size: 34px; font-weight: 800; color: #4fc3f7; letter-spacing: -1px; }
+
+  .rebate-note { background: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 8px; padding: 12px 16px; font-size: 12px; color: #2e7d32; margin-bottom: 20px; }
+  .rebate-note strong { display: block; margin-bottom: 4px; font-size: 13px; }
+
+  .validity { background: #fff8e1; border: 1px solid #ffd54f; border-radius: 8px; padding: 12px 16px; font-size: 12px; color: #5a4000; margin-bottom: 20px; }
+
+  .footer { font-size: 11px; color: #b0bac5; text-align: center; border-top: 1px solid #eee; padding-top: 14px; margin-top: 4px; }
+  @media print { body { padding: 16px; } .oop-bar { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-row">
+    <div>
+      <h1>Pi Energy Systems</h1>
+      <div class="sub">Solar &amp; Battery System Proposal</div>
+    </div>
+    <div class="hdr-meta">
+      Quote Reference<strong>${quoteRef}</strong>
+      Date: ${quoteDate}
+    </div>
+  </div>
+</div>
+
+${systemBadge ? `<div class="system-banner">${systemBadge}</div>` : ''}
+
+<div class="to-box">
+  <div class="label">Prepared for</div>
+  <div class="name">${customerName}</div>
+  <div class="meta">Quote #${quoteRef} &nbsp;·&nbsp; ${quoteDate}</div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>System Components &amp; Services</th>
+      <th class="qty-cell">Qty</th>
+      <th class="price-cell">Price (inc GST)</th>
+    </tr>
+  </thead>
+  <tbody>${lineRows}</tbody>
+  <tfoot>
+    <tr>
+      <td colspan="2">Total (inc GST)</td>
+      <td class="price-cell">${fmt(grossInc)}</td>
+    </tr>
+  </tfoot>
+</table>
+
+<div class="pricing-box">
+  <h3>💰 Your Investment</h3>
+  <div class="prow"><span class="lbl">System total (inc GST)</span><span class="val">${fmt(grossInc)}</span></div>
+  <div class="prow gst"><span class="lbl">GST included (10%)</span><span class="val">${fmt(gstAmt)}</span></div>
+  ${totalRebate > 0 ? `
+  <div class="prow rebate">
+    <span class="lbl">🏛️ Government Rebate (STC scheme)</span>
+    <span class="val">−${fmt(totalRebate)}</span>
+  </div>` : ''}
+</div>
+
+<div class="oop-bar">
+  <div>
+    <div class="lbl">Amount Payable${totalRebate > 0 ? ' (after Government Rebate)' : ''}</div>
+    <div class="sub">Inclusive of GST · STC rebate deducted at point of sale</div>
+  </div>
+  <div class="val">${fmt(oop)}</div>
+</div>
+
+${totalRebate > 0 ? `
+<div class="rebate-note">
+  <strong>🏛️ About Your Government Rebate</strong>
+  The Small-scale Technology Certificate (STC) scheme is a Federal Government incentive
+  that reduces the upfront cost of eligible solar and battery systems. Your rebate of
+  <strong>${fmt(totalRebate)}</strong> has been applied directly to the price above —
+  there is nothing further for you to claim.
+</div>` : ''}
+
+<div class="validity">
+  ⏱️ <strong>Quote Validity:</strong> This proposal is valid for 30 days from ${quoteDate}.
+  Prices are subject to change after this period. STC rebate is calculated at current government rates.
+</div>
+
+<div class="footer">
+  Pi Energy Systems &nbsp;·&nbsp; This proposal was prepared specifically for ${customerName} &nbsp;·&nbsp; ${quoteDate}<br>
+  For questions about this proposal please contact your Pi Energy representative.
+</div>
+
+</body>
+</html>`;
 }
 
 function generateQuoteHTML() {
