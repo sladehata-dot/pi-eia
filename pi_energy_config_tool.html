@@ -497,6 +497,17 @@
         </div>
       </div>
 
+      <!-- Installer selector -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+        <div class="field-group">
+          <label>Installer</label>
+          <select id="installerSelect" style="width:100%;padding:7px 10px;border:1.5px solid #dce3ec;border-radius:6px;font-size:13px;background:white;">
+            <option value="">— No installer selected —</option>
+          </select>
+        </div>
+        <div id="installerInfo" style="font-size:11.5px;color:#5a6a7e;padding:6px 10px;background:#f5f8fc;border-radius:6px;align-self:end;display:none;"></div>
+      </div>
+
       <!-- Add product bar -->
       <div class="add-bar">
         <select id="productSelect">
@@ -794,6 +805,25 @@ const SUPPLIERS = [
   { id: 'pi',  name: 'Pi Energy (internal)' },
 ];
 
+const INSTALLERS = [
+  {
+    id: 'peter-gow',
+    company:      'Peter Gow Electrical',
+    contact:      'Ryan Windon',
+    address:      '10 Bounty Street, Lismore NSW 2480',
+    companyPhone: '0416 242 646',
+    contactPhone: '0413 547 434',
+  },
+  {
+    id: 'enerj',
+    company:      'Ener J Electrical',
+    contact:      'Jean-Jacques Tessier',
+    address:      '9 Aviation Ave, Upper Coomera QLD 4208',
+    companyPhone: '0422 723 540',
+    contactPhone: '0422 723 540',
+  },
+];
+
 const PRODUCTS = [
   // ── INVERTERS ──
   {
@@ -1065,6 +1095,16 @@ document.addEventListener('DOMContentLoaded', () => {
     addProductById(p.id, p.suppliers[0]);
   });
 
+  // Populate installer dropdown
+  const instSel = document.getElementById('installerSelect');
+  INSTALLERS.forEach(inst => {
+    const opt = document.createElement('option');
+    opt.value = inst.id;
+    opt.textContent = inst.company + (inst.contact ? ` — ${inst.contact}` : '');
+    instSel.appendChild(opt);
+  });
+  instSel.addEventListener('change', updateInstallerInfo);
+
   // Populate custom item supplier dropdown
   const customSupSel = document.getElementById('customItemSupplier');
   SUPPLIERS.forEach(s => {
@@ -1180,6 +1220,23 @@ function addProductById(productId, supplierId) {
   }
   lineItems.push(li);
 
+  // Auto-add extra inverter labour ($250/unit) when product has extraInverterQty
+  if (prod.extraInverterQty) {
+    const extraCount = prod.extraInverterQty * defaultQty;
+    rowCounter++;
+    lineItems.push({
+      rowId:          `row-${rowCounter}`,
+      isCustom:       true,
+      isAutoLabour:   true,
+      autoLabourFor:  rowId,
+      customName:     `Additional Inverter Labour (${prod.name})`,
+      customCategory: 'Labour',
+      supplierId:     'pi',
+      qty:            extraCount,
+      customCost:     250,
+    });
+  }
+
   renderTable();
   // Always clear override when adding a product so STC count reflects the new state
   if (prod.isSolarPanel || prod.inverterKw || prod.batteryKwh) stcOverridden = false;
@@ -1188,7 +1245,8 @@ function addProductById(productId, supplierId) {
 }
 
 function removeProduct(rowId) {
-  lineItems = lineItems.filter(li => li.rowId !== rowId);
+  // Also remove any auto-labour lines linked to this product
+  lineItems = lineItems.filter(li => li.rowId !== rowId && li.autoLabourFor !== rowId);
   renderTable();
   stcOverridden = false;
   autoCalcStcs();
@@ -2192,6 +2250,7 @@ function captureState() {
     customerPhone:   document.getElementById('customerPhone')?.value.trim()   || '',
     poTravel:        parseFloat(document.getElementById('poTravel')?.value)   || 0,
     poDelivery:      document.getElementById('poDelivery')?.value             || 'installer',
+    installerId:     document.getElementById('installerSelect')?.value        || '',
     stcOverridden,
     stcManualCount: stcOverridden
       ? (parseInt(document.getElementById('stcCount')?.value) || null) : null,
@@ -2217,8 +2276,9 @@ function restoreState(state) {
   const addrEl  = document.getElementById('customerAddress'); if (addrEl)  addrEl.value  = state.customerAddress || '';
   const emailEl = document.getElementById('customerEmail');   if (emailEl) emailEl.value = state.customerEmail   || '';
   const phoneEl = document.getElementById('customerPhone');   if (phoneEl) phoneEl.value = state.customerPhone   || '';
-  const travelEl   = document.getElementById('poTravel');    if (travelEl)   travelEl.value   = state.poTravel   ?? 0;
-  const deliveryEl = document.getElementById('poDelivery');  if (deliveryEl) deliveryEl.value = state.poDelivery || 'installer';
+  const travelEl   = document.getElementById('poTravel');      if (travelEl)   travelEl.value   = state.poTravel    ?? 0;
+  const deliveryEl = document.getElementById('poDelivery');    if (deliveryEl) deliveryEl.value = state.poDelivery  || 'installer';
+  const instEl     = document.getElementById('installerSelect'); if (instEl) { instEl.value = state.installerId || ''; updateInstallerInfo(); }
 
   (state.lineItems || []).forEach(li => {
     rowCounter++;
@@ -2406,6 +2466,20 @@ let _folderRootName = null;      // last known root folder name
 function updateFolderIndicator(name) {
   _folderRootName = name || null;
   refreshFolderIndicator();
+}
+
+function updateInstallerInfo() {
+  const sel   = document.getElementById('installerSelect');
+  const panel = document.getElementById('installerInfo');
+  if (!sel || !panel) return;
+  const inst = INSTALLERS.find(i => i.id === sel.value);
+  if (inst) {
+    panel.style.display = 'block';
+    panel.innerHTML = `<strong>${inst.company}</strong><br>${inst.address}<br>
+      Ph: ${inst.companyPhone}${inst.contact !== inst.company ? `&nbsp;·&nbsp;Contact: ${inst.contact} ${inst.contactPhone}` : ''}`;
+  } else {
+    panel.style.display = 'none';
+  }
 }
 
 function refreshFolderIndicator() {
@@ -3114,6 +3188,8 @@ function generatePurchaseOrderHTML() {
   const poDate          = new Date().toISOString().split('T')[0];
   const poRef           = `PO-${quoteRef}`;
   const rates           = calcInstallerRates();
+  const installerId     = document.getElementById('installerSelect')?.value || '';
+  const installer       = INSTALLERS.find(i => i.id === installerId) || null;
 
   // Build system description for context (no costs)
   let systemItems = [];
@@ -3179,7 +3255,7 @@ function generatePurchaseOrderHTML() {
   </div>
 </div>
 
-<div class="party-grid">
+<div class="party-grid" style="grid-template-columns:${installer ? '1fr 1fr 1fr' : '1fr 1fr'}">
   <div class="box">
     <h3>Issued By</h3>
     <p><strong>Pi Energy Systems</strong></p>
@@ -3192,6 +3268,14 @@ function generatePurchaseOrderHTML() {
     ${customerEmail   ? `<p>${customerEmail}</p>`   : ''}
     ${customerPhone   ? `<p>${customerPhone}</p>`   : ''}
   </div>
+  ${installer ? `
+  <div class="box" style="border:2px solid #1b5e20;">
+    <h3 style="color:#1b5e20;">Installer</h3>
+    <p><strong>${installer.company}</strong></p>
+    <p>${installer.address}</p>
+    <p>Ph: ${installer.companyPhone}</p>
+    ${installer.contact ? `<p style="margin-top:5px;color:#7a8a9e;">Contact: <strong style="color:#1a2332;">${installer.contact}</strong> &nbsp; ${installer.contactPhone}</p>` : ''}
+  </div>` : ''}
 </div>
 
 <div class="box" style="margin-bottom:20px;">
@@ -3262,7 +3346,7 @@ function generatePurchaseOrderHTML() {
   </div>
   <div>
     <div style="height:50px;"></div>
-    <div class="sig-line">Installer acknowledgement &nbsp;&nbsp;&nbsp; Date: ___________</div>
+    <div class="sig-line">${installer ? `${installer.company} — ${installer.contact || 'Installer'}` : 'Installer'} acknowledgement &nbsp;&nbsp;&nbsp; Date: ___________</div>
   </div>
 </div>
 
