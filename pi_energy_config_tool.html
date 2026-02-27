@@ -1320,11 +1320,14 @@ function solarPanelCalc(li) {
 }
 
 // ── MOUNTING HARDWARE COST HELPER ──
+// Tin roof:   $90 per 6 panels (standard tin clamps/rails)
 // Tile roof:  1 kit per 6 panels — price from Powerwave tile kit product (id: tile-kit-powerwave)
 // Tilt mount: 1 unit per 6 panels × $89.90/unit
 //             + legs (panels_on_tilt + 1) × $9.90/leg  [auto-calculated]
 //             + extra per-panel rate
 // tilePanels / tiltPanels: null = use total panel qty; otherwise use entered value
+const TIN_MOUNT_RATE = 90;   // $ per 6 panels
+
 function mountingCalc(li) {
   const totalPanels = parseInt(li.qty) || 0;
 
@@ -1332,9 +1335,15 @@ function mountingCalc(li) {
   const tileKitProd  = PRODUCTS.find(p => p.isTileKit);
   const tileKitPrice = tileKitProd ? tileKitProd.costExGst : 127.50;
 
+  let tinUnits = 0, tinCost = 0;
   let tileUnits = 0, tileCost = 0, tilePanelsUsed = 0;
   let tiltUnits = 0, tiltBaseCost = 0, tiltLegCount = 0, tiltLegCost = 0,
       tiltExtraCost = 0, tiltPanelsUsed = 0;
+
+  if (li.roofType === 'tin') {
+    tinUnits = Math.ceil(totalPanels / 6);
+    tinCost  = tinUnits * TIN_MOUNT_RATE;
+  }
 
   if (li.roofType === 'tile') {
     tilePanelsUsed = (li.tilePanels !== null && li.tilePanels !== undefined && li.tilePanels !== '')
@@ -1367,8 +1376,9 @@ function mountingCalc(li) {
     }
   }
 
-  const totalMountingCost = tileCost + tiltBaseCost + tiltLegCost + tiltExtraCost;
-  return { tileUnits, tileCost, tilePanelsUsed, tileKitPrice,
+  const totalMountingCost = tinCost + tileCost + tiltBaseCost + tiltLegCost + tiltExtraCost;
+  return { tinUnits, tinCost,
+           tileUnits, tileCost, tilePanelsUsed, tileKitPrice,
            tiltUnits, tiltBaseCost, tiltLegCount, tiltLegCost, tiltExtraCost, tiltPanelsUsed,
            totalMountingCost };
 }
@@ -1633,6 +1643,7 @@ function renderTable() {
                   <input type="radio" name="roof_${li.rowId}" value="tin" ${li.roofType === 'tin' ? 'checked' : ''}
                     onchange="updateSolarMounting('${li.rowId}','roofType','tin')" style="accent-color:#5d4037;">
                   Tin
+                  <span style="font-weight:400;color:#795548;font-size:11px;">$${TIN_MOUNT_RATE}/6 panels${li.roofType === 'tin' ? ` = $${mc.tinCost.toFixed(2)}` : ''}</span>
                 </label>
                 <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;font-weight:600;
                   padding:4px 10px;border-radius:5px;border:1.5px solid ${li.roofType === 'tile' ? '#5d4037' : '#bcaaa4'};
