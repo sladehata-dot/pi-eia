@@ -1170,10 +1170,10 @@ function addProductById(productId, supplierId) {
     li.cpw            = 35;      // default cents per watt
     li.panelPrice     = 140;     // default price per panel ($)
     li.labourCpw      = 30;      // default solar labour rate: 30 c/W ($0.30/W)
-    // Mounting hardware — tin (tilt) is default; tile overrides when selected
-    li.mountTile      = false;   // tile roof mounting enabled
-    li.tilePanels     = null;    // panels on tile — null = auto (use total qty)
-    li.mountTilt      = true;    // tilt mount (tin roof) — DEFAULT
+    // Mounting hardware
+    li.roofType       = 'tin';   // 'tin' (default) or 'tile' — mutually exclusive roof material
+    li.tilePanels     = null;    // panels with tile kit — null = auto (use total qty)
+    li.mountTilt      = false;   // tilt frame mount — optional, applies to either roof type
     li.tiltPanels     = null;    // panels on tilt — null = auto (use total qty)
     li.tiltSamePanels = false;   // true = derive tilt panel count from tile (same physical panels)
     // legs = panels_on_tilt + 1 (auto-calculated, no manual input)
@@ -1336,7 +1336,7 @@ function mountingCalc(li) {
   let tiltUnits = 0, tiltBaseCost = 0, tiltLegCount = 0, tiltLegCost = 0,
       tiltExtraCost = 0, tiltPanelsUsed = 0;
 
-  if (li.mountTile) {
+  if (li.roofType === 'tile') {
     tilePanelsUsed = (li.tilePanels !== null && li.tilePanels !== undefined && li.tilePanels !== '')
       ? (parseInt(li.tilePanels) || 0) : totalPanels;
     tileUnits = Math.ceil(tilePanelsUsed / 6);
@@ -1344,7 +1344,7 @@ function mountingCalc(li) {
   }
 
   if (li.mountTilt) {
-    if (li.tiltSamePanels && li.mountTile) {
+    if (li.tiltSamePanels && li.roofType === 'tile') {
       // "Same panels as tile" — legs ONLY; panels on tile already provide attachment.
       // No tilt frame units, no extra per-panel charge.
       tiltPanelsUsed = tilePanelsUsed;   // mirror tile's already-calculated count
@@ -1623,16 +1623,28 @@ function renderTable() {
           <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;font-size:13px;">
             <span style="color:#37474f;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:0.4px;min-width:80px;padding-top:6px;">🏗️ Mounting</span>
 
-            <!-- TILE ROOF -->
+            <!-- ROOF TYPE: Tin / Tile (mutually exclusive) -->
             <div style="border:1px solid #bcaaa4;border-radius:7px;padding:8px 12px;background:#efebe9;min-width:220px;">
-              <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-weight:700;color:#4e342e;font-size:12px;">
-                <input type="checkbox" ${li.mountTile ? 'checked' : ''}
-                  onchange="updateSolarMounting('${li.rowId}','mountTile',this.checked)">
-                Tile Roof
-                <span style="font-weight:400;color:#795548;font-size:11px;">$${mc.tileKitPrice.toFixed(2)}/kit · 1 per 6 panels</span>
-              </label>
-              ${li.mountTile ? `
-              <div style="display:flex;align-items:center;gap:7px;margin-top:6px;padding-left:20px;flex-wrap:wrap;font-size:12px;">
+              <div style="font-weight:700;color:#4e342e;font-size:12px;margin-bottom:6px;">Roof Type</div>
+              <div style="display:flex;gap:8px;">
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;font-weight:600;
+                  padding:4px 10px;border-radius:5px;border:1.5px solid ${li.roofType === 'tin' ? '#5d4037' : '#bcaaa4'};
+                  background:${li.roofType === 'tin' ? '#d7ccc8' : 'white'};color:#4e342e;">
+                  <input type="radio" name="roof_${li.rowId}" value="tin" ${li.roofType === 'tin' ? 'checked' : ''}
+                    onchange="updateSolarMounting('${li.rowId}','roofType','tin')" style="accent-color:#5d4037;">
+                  Tin
+                </label>
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;font-weight:600;
+                  padding:4px 10px;border-radius:5px;border:1.5px solid ${li.roofType === 'tile' ? '#5d4037' : '#bcaaa4'};
+                  background:${li.roofType === 'tile' ? '#d7ccc8' : 'white'};color:#4e342e;">
+                  <input type="radio" name="roof_${li.rowId}" value="tile" ${li.roofType === 'tile' ? 'checked' : ''}
+                    onchange="updateSolarMounting('${li.rowId}','roofType','tile')" style="accent-color:#5d4037;">
+                  Tile
+                  <span style="font-weight:400;color:#795548;font-size:11px;">$${mc.tileKitPrice.toFixed(2)}/kit · 1 per 6</span>
+                </label>
+              </div>
+              ${li.roofType === 'tile' ? `
+              <div style="display:flex;align-items:center;gap:7px;margin-top:8px;flex-wrap:wrap;font-size:12px;">
                 <label style="color:#5d4037;">Panels on tile:</label>
                 <input type="number" min="0" max="${li.qty}" step="1" value="${tilePanelVal}"
                   style="width:58px;padding:3px 6px;border:1.5px solid #bcaaa4;border-radius:4px;font-size:12px;text-align:right;background:white;"
@@ -1641,16 +1653,16 @@ function renderTable() {
               </div>` : ''}
             </div>
 
-            <!-- TILT MOUNT -->
+            <!-- TILT MOUNT (works on tin or tile) -->
             <div style="border:1px solid #90a4ae;border-radius:7px;padding:8px 12px;background:#e3f2fd;min-width:260px;">
               <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-weight:700;color:#263238;font-size:12px;">
                 <input type="checkbox" ${li.mountTilt ? 'checked' : ''}
                   onchange="updateSolarMounting('${li.rowId}','mountTilt',this.checked)">
-                Tilt Mount (Tin)
+                Tilt Mount
                 <span style="font-weight:400;color:#546e7a;font-size:11px;">$89.90/unit · 1 per 6 panels</span>
               </label>
               ${li.mountTilt ? `
-              ${li.mountTile ? `
+              ${li.roofType === 'tile' ? `
               <div style="margin-top:5px;padding-left:20px;">
                 <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:#37474f;">
                   <input type="checkbox" ${li.tiltSamePanels ? 'checked' : ''}
@@ -1752,13 +1764,12 @@ function updateSolarPanel(rowId, field, val) {
 function updateSolarMounting(rowId, field, val) {
   const li = lineItems.find(l => l.rowId === rowId);
   if (!li) return;
-  if (field === 'mountTile' || field === 'mountTilt') {
+  if (field === 'roofType') {
+    li.roofType = val; // 'tin' or 'tile'
+    if (val === 'tin') { li.tilePanels = null; li.tiltSamePanels = false; }
+  } else if (field === 'mountTilt') {
     li[field] = !!val;
-    // When toggling off, reset the panel count so it auto-fills next time it's enabled
-    if (!val) {
-      if (field === 'mountTile') li.tilePanels = null;
-      if (field === 'mountTilt') { li.tiltPanels = null; }
-    }
+    if (!val) { li.tiltPanels = null; li.tiltSamePanels = false; }
   } else if (field === 'tiltSamePanels') {
     li.tiltSamePanels = !!val;
     if (li.tiltSamePanels) li.tiltPanels = null; // clear manual count when linking to tile
@@ -2607,7 +2618,7 @@ function generateCustomerQuoteHTML() {
         costEx     = solarLineTotalEx(li);
         solarKwSum += calc.systemKw;
         lineLabel  = `Solar PV System — ${calc.systemKw.toFixed(2)}kW`;
-        lineDesc   = `${li.qty} × ${li.panelW}W panels · supply &amp; install${li.mountTile || li.mountTilt ? ' · mounting hardware included' : ''}`;
+        lineDesc   = `${li.qty} × ${li.panelW}W panels · supply &amp; install${li.roofType === 'tile' || li.mountTilt ? ' · mounting hardware included' : ''}`;
         lineQty    = 1;   // show as single system line
       } else {
         const c   = li.customCost !== null ? li.customCost : prod.costExGst;
@@ -2870,7 +2881,7 @@ function generateQuoteHTML() {
       if (mc.tiltLegCost > 0 || mc.tiltBaseCost > 0) subRows += `
         <tr style="background:#f5faf5;">
           <td style="padding:3px 10px 3px 30px;color:#37474f;font-size:11px;" colspan="2">
-            🏗️ Tilt Mounting — ${li.tiltSamePanels && li.mountTile
+            🏗️ Tilt Mounting — ${li.tiltSamePanels && li.roofType === 'tile'
               ? `Legs only (same panels as tile) — ${mc.tiltLegCount} legs (${mc.tiltPanelsUsed} + 1) × $9.90`
               : `${mc.tiltUnits} unit${mc.tiltUnits > 1 ? 's' : ''} × $89.90
             + ${mc.tiltLegCount} legs (${mc.tiltPanelsUsed} panels + 1) × $9.90
