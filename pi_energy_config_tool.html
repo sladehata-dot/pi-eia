@@ -1078,14 +1078,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // Auto-fill Quote Ref from localStorage counter (number is "reserved" on load)
   document.getElementById('quoteRef').value = String(getNextQuoteNum());
 
-  // Restore Customers folder handle from IndexedDB (silent — no picker shown)
-  loadCustomersHandle().then(handle => {
-    if (handle) {
-      customersHandleCache = handle;
-      updateFolderIndicator(handle.name);
-    }
-  });
-
   // Ping local save-server — show indicator if running (pi-save-server.js)
   fetch('http://127.0.0.1:3737/ping', { signal: AbortSignal.timeout(400) })
     .then(r => r.ok && r.json())
@@ -1178,10 +1170,10 @@ function addProductById(productId, supplierId) {
     li.cpw            = 35;      // default cents per watt
     li.panelPrice     = 140;     // default price per panel ($)
     li.labourCpw      = 30;      // default solar labour rate: 30 c/W ($0.30/W)
-    // Mounting hardware
+    // Mounting hardware — tin (tilt) is default; tile overrides when selected
     li.mountTile      = false;   // tile roof mounting enabled
     li.tilePanels     = null;    // panels on tile — null = auto (use total qty)
-    li.mountTilt      = false;   // tilt mount (tin roof) enabled
+    li.mountTilt      = true;    // tilt mount (tin roof) — DEFAULT
     li.tiltPanels     = null;    // panels on tilt — null = auto (use total qty)
     li.tiltSamePanels = false;   // true = derive tilt panel count from tile (same physical panels)
     // legs = panels_on_tilt + 1 (auto-calculated, no manual input)
@@ -3112,46 +3104,18 @@ function generatePurchaseOrderHTML() {
   const poRef           = `PO-${quoteRef}`;
   const rates           = calcInstallerRates();
 
-  // Build products table
-  let prodRows = '';
-  let totalCostEx = 0;
+  // Build system description for context (no costs)
+  let systemItems = [];
   lineItems.forEach(li => {
-    if (li.isCustom) {
-      const costEx = (li.customCost || 0) * li.qty;
-      totalCostEx += costEx;
-      prodRows += `<tr><td>${li.customName || 'Custom Item'}</td><td style="text-align:center">${li.qty}</td><td>—</td><td style="text-align:right">${fmt(li.customCost || 0)}</td><td style="text-align:right">${fmt(costEx)}</td></tr>`;
-      return;
+    if (li.isCustom) { systemItems.push(`${li.qty}× ${li.customName || 'Custom Item'}`); return; }
+    const prod = PRODUCTS.find(p => p.id === li.productId);
+    if (!prod) return;
+    if (prod.isSolarPanel) {
+      const calc = solarPanelCalc(li);
+      systemItems.push(`${li.qty}× ${li.panelW}W panels (${calc.systemKw.toFixed(2)}kW)`);
+    } else {
+      systemItems.push(`${li.qty}× ${prod.name}`);
     }
-    const prod = PRODUCTS.find(p => p.id === li.productId);
-    if (!prod || prod.isSolarPanel) return; // solar handled separately in install section
-    const sup     = SUPPLIERS.find(s => s.id === li.supplierId);
-    const costEx  = (li.customCost !== null ? li.customCost : prod.costExGst) * li.qty;
-    totalCostEx  += costEx;
-    prodRows += `<tr>
-      <td>${prod.name}<br><small style="color:#9aa5b4">${prod.specs || ''}</small></td>
-      <td style="text-align:center">${li.qty}</td>
-      <td>${sup ? sup.name : '—'}</td>
-      <td style="text-align:right">${fmt(li.customCost !== null ? li.customCost : prod.costExGst)}</td>
-      <td style="text-align:right">${fmt(costEx)}</td>
-    </tr>`;
-  });
-
-  // Solar panels as a group
-  let solarPanelRows = '';
-  lineItems.forEach(li => {
-    if (li.isCustom) return;
-    const prod = PRODUCTS.find(p => p.id === li.productId);
-    if (!prod || !prod.isSolarPanel) return;
-    const calc = solarPanelCalc(li);
-    const sup  = SUPPLIERS.find(s => s.id === li.supplierId);
-    totalCostEx += calc.lineEx;
-    solarPanelRows += `<tr>
-      <td>${prod.name} — ${li.qty} × ${li.panelW}W = ${calc.systemKw.toFixed(2)}kW<br><small style="color:#9aa5b4">${prod.specs || ''}</small></td>
-      <td style="text-align:center">${li.qty}</td>
-      <td>${sup ? sup.name : '—'}</td>
-      <td style="text-align:right">${fmt(li.customCost !== null ? li.customCost : prod.costExGst)}</td>
-      <td style="text-align:right">${fmt(calc.lineEx)}</td>
-    </tr>`;
   });
 
   const deliveryLabel = rates.delivery === 'pickup' ? 'Supplier warehouse pickup' : 'Deliver to installer';
@@ -3219,28 +3183,10 @@ function generatePurchaseOrderHTML() {
   </div>
 </div>
 
-<h2 style="font-size:13px;font-weight:700;color:#4a148c;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Products / Materials to Order</h2>
-<table>
-  <thead>
-    <tr>
-      <th style="width:42%">Product / Description</th>
-      <th style="width:8%;text-align:center">Qty</th>
-      <th style="width:15%">Supplier</th>
-      <th style="width:15%;text-align:right">Unit Cost</th>
-      <th style="width:20%;text-align:right">Line Total</th>
-    </tr>
-  </thead>
-  <tbody>
-    ${solarPanelRows}
-    ${prodRows}
-  </tbody>
-  <tfoot>
-    <tr>
-      <td colspan="4">Total Product Cost (ex GST)</td>
-      <td style="text-align:right">${fmt(totalCostEx)}</td>
-    </tr>
-  </tfoot>
-</table>
+<div class="box" style="margin-bottom:20px;">
+  <h3>System — Quote #${quoteRef} · ${quoteDate}</h3>
+  <p style="margin-top:6px;color:#1a2332;">${systemItems.join(' &nbsp;·&nbsp; ') || '—'}</p>
+</div>
 
 <div class="delivery-box">
   <h3>Stock Delivery</h3>
