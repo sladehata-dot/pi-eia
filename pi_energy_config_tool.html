@@ -1172,7 +1172,6 @@ function addProductById(productId, supplierId) {
     li.labourCpw      = 30;      // default solar labour rate: 30 c/W ($0.30/W)
     // Mounting hardware
     li.roofType       = 'tin';   // 'tin' (default) or 'tile' — mutually exclusive roof material
-    li.tilePanels     = null;    // panels with tile kit — null = auto (use total qty)
     li.mountTilt      = false;   // tilt frame mount — optional, applies to either roof type
     li.tiltPanels     = null;    // panels on tilt — null = auto (use total qty)
     li.tiltSamePanels = false;   // true = derive tilt panel count from tile (same physical panels)
@@ -1346,8 +1345,7 @@ function mountingCalc(li) {
   }
 
   if (li.roofType === 'tile') {
-    tilePanelsUsed = (li.tilePanels !== null && li.tilePanels !== undefined && li.tilePanels !== '')
-      ? (parseInt(li.tilePanels) || 0) : totalPanels;
+    tilePanelsUsed = totalPanels;
     tileUnits = Math.ceil(tilePanelsUsed / 6);
     tileCost  = tileUnits * tileKitPrice;
   }
@@ -1625,7 +1623,6 @@ function renderTable() {
       trMount.style.borderBottom = '2px solid #b0bec5';
 
       const tiltExtraRate  = li.tiltExtraRate !== undefined ? li.tiltExtraRate : 15;
-      const tilePanelVal   = li.tilePanels !== null && li.tilePanels !== undefined ? li.tilePanels : li.qty;
       const tiltPanelVal   = li.tiltPanels !== null && li.tiltPanels !== undefined ? li.tiltPanels : li.qty;
 
       trMount.innerHTML = `
@@ -1651,17 +1648,9 @@ function renderTable() {
                   <input type="radio" name="roof_${li.rowId}" value="tile" ${li.roofType === 'tile' ? 'checked' : ''}
                     onchange="updateSolarMounting('${li.rowId}','roofType','tile')" style="accent-color:#5d4037;">
                   Tile
-                  <span style="font-weight:400;color:#795548;font-size:11px;">$${mc.tileKitPrice.toFixed(2)}/kit · 1 per 6</span>
+                  <span style="font-weight:400;color:#795548;font-size:11px;">$${mc.tileKitPrice.toFixed(2)}/kit · 1 per 6${li.roofType === 'tile' ? ` = ${mc.tileUnits} unit${mc.tileUnits !== 1 ? 's' : ''} = <strong style="color:#4e342e;">$${mc.tileCost.toFixed(2)}</strong>` : ''}</span>
                 </label>
               </div>
-              ${li.roofType === 'tile' ? `
-              <div style="display:flex;align-items:center;gap:7px;margin-top:8px;flex-wrap:wrap;font-size:12px;">
-                <label style="color:#5d4037;">Panels on tile:</label>
-                <input type="number" min="0" max="${li.qty}" step="1" value="${tilePanelVal}"
-                  style="width:58px;padding:3px 6px;border:1.5px solid #bcaaa4;border-radius:4px;font-size:12px;text-align:right;background:white;"
-                  oninput="updateSolarMounting('${li.rowId}','tilePanels',this.value)">
-                <span style="color:#5d4037;">→ ${mc.tileUnits} units = <strong style="color:#4e342e;">$${mc.tileCost.toFixed(2)}</strong></span>
-              </div>` : ''}
             </div>
 
             <!-- TILT MOUNT (works on tin or tile) -->
@@ -1777,14 +1766,14 @@ function updateSolarMounting(rowId, field, val) {
   if (!li) return;
   if (field === 'roofType') {
     li.roofType = val; // 'tin' or 'tile'
-    if (val === 'tin') { li.tilePanels = null; li.tiltSamePanels = false; }
+    if (val === 'tin') { li.tiltSamePanels = false; }
   } else if (field === 'mountTilt') {
     li[field] = !!val;
     if (!val) { li.tiltPanels = null; li.tiltSamePanels = false; }
   } else if (field === 'tiltSamePanels') {
     li.tiltSamePanels = !!val;
     if (li.tiltSamePanels) li.tiltPanels = null; // clear manual count when linking to tile
-  } else if (field === 'tilePanels' || field === 'tiltPanels') {
+  } else if (field === 'tiltPanels') {
     li[field] = val === '' ? null : (parseInt(val) || 0);
   } else if (field === 'tiltExtraRate') {
     li[field] = parseFloat(val) || 0;
