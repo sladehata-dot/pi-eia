@@ -544,6 +544,10 @@
             style="width:130px;padding:6px 10px;border:1.5px solid #dce3ec;border-radius:6px;font-size:13px;text-align:right;outline:none;color:#1a2332;">
           <input type="number" id="customItemQty" value="1" min="1" max="999" title="Qty"
             style="width:58px;padding:6px 8px;border:1.5px solid #dce3ec;border-radius:6px;font-size:13px;text-align:center;outline:none;color:#1a2332;">
+          <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:#4a148c;font-weight:600;cursor:pointer;white-space:nowrap;" title="Include in installer Purchase Order as labour scope">
+            <input type="checkbox" id="customItemInstallerScope" style="accent-color:#6a1b9a;">
+            Installer scope
+          </label>
           <button onclick="addCustomItem()" class="btn-add" style="white-space:nowrap;">+ Add Item</button>
         </div>
         <div id="customItemHint" style="font-size:11px;color:#9aa5b4;margin-top:5px;font-style:italic;min-height:16px;"></div>
@@ -1291,10 +1295,11 @@ function addCustomItem() {
     return;
   }
 
-  const category   = document.getElementById('customItemCategory').value;
-  const supplierId = document.getElementById('customItemSupplier').value;
-  const cost       = parseFloat(document.getElementById('customItemCost').value) || 0;
-  const qty        = Math.max(1, parseInt(document.getElementById('customItemQty').value) || 1);
+  const category        = document.getElementById('customItemCategory').value;
+  const supplierId      = document.getElementById('customItemSupplier').value;
+  const cost            = parseFloat(document.getElementById('customItemCost').value) || 0;
+  const qty             = Math.max(1, parseInt(document.getElementById('customItemQty').value) || 1);
+  const installerScope  = document.getElementById('customItemInstallerScope').checked;
 
   rowCounter++;
   lineItems.push({
@@ -1306,6 +1311,7 @@ function addCustomItem() {
     supplierId,
     qty,
     customCost: cost,
+    installerScope,
   });
 
   // Clear form for next entry
@@ -1314,6 +1320,7 @@ function addCustomItem() {
   document.getElementById('customItemQty').value  = '1';
   document.getElementById('customItemHint').textContent = '';
   document.getElementById('customItemCategory').value = 'Misc';
+  document.getElementById('customItemInstallerScope').checked = false;
 
   renderTable();
   recalculate();
@@ -1329,7 +1336,8 @@ function updateCustomItem(rowId, field, val) {
 
   // Re-render for changes that affect row structure; for cost changes patch cells in-place
   // (avoids recreating the input and losing cursor position mid-type)
-  if (field === 'qty' || field === 'customCategory') {
+  if (field === 'installerScope') li.installerScope = !!val;
+  if (field === 'qty' || field === 'customCategory' || field === 'installerScope') {
     renderTable();
   } else if (field === 'customCost') {
     // Patch the three display spans directly so the row total stays live while typing
@@ -1488,6 +1496,12 @@ function renderTable() {
               ).join('')}
             </select>
             <span style="color:#c8d0dc;font-size:10px;font-style:italic;">custom item</span>
+            <label style="display:flex;align-items:center;gap:3px;font-size:10px;color:${li.installerScope ? '#4a148c' : '#aaa'};font-weight:${li.installerScope ? '700' : '400'};cursor:pointer;" title="Include in installer PO">
+              <input type="checkbox" ${li.installerScope ? 'checked' : ''}
+                onchange="updateCustomItem('${li.rowId}','installerScope',this.checked)"
+                style="accent-color:#6a1b9a;">
+              Installer scope
+            </label>
           </div>
         </td>
         <td class="center">
@@ -3150,9 +3164,13 @@ function calcInstallerRates() {
   let extraInvQty  = 0;
   let removePanels = 0;
   let solarLabourTotal = 0;
+  const installerCustomItems = [];
 
   lineItems.forEach(li => {
-    if (li.isCustom) return;
+    if (li.isCustom) {
+      if (li.installerScope) installerCustomItems.push(li);
+      return;
+    }
     const prod = PRODUCTS.find(p => p.id === li.productId);
     if (!prod) return;
     if (prod.isSolarPanel) {
@@ -3165,16 +3183,18 @@ function calcInstallerRates() {
     if (prod.id === 'remove-panel') removePanels += li.qty;
   });
 
-  const travel         = parseFloat(document.getElementById('poTravel')?.value)   || 0;
-  const delivery       = document.getElementById('poDelivery')?.value             || 'installer';
-  const solarRate      = solarLabourTotal;             // from quote (matches labourCpw)
-  const batteryRate    = batteryQty   * 1500;
-  const extraInvRate   = extraInvQty  * 250;
-  const removePanRate  = removePanels * 15;
-  const totalInstall   = solarRate + batteryRate + extraInvRate + removePanRate + travel;
+  const travel              = parseFloat(document.getElementById('poTravel')?.value)   || 0;
+  const delivery            = document.getElementById('poDelivery')?.value             || 'installer';
+  const solarRate           = solarLabourTotal;
+  const batteryRate         = batteryQty   * 1500;
+  const extraInvRate        = extraInvQty  * 250;
+  const removePanRate       = removePanels * 15;
+  const installerCustomTotal = installerCustomItems.reduce((s, li) => s + (li.customCost || 0) * li.qty, 0);
+  const totalInstall        = solarRate + batteryRate + extraInvRate + removePanRate + installerCustomTotal + travel;
 
   return { solarW, batteryQty, extraInvQty, removePanels, travel, delivery,
-           solarRate, batteryRate, extraInvRate, removePanRate, totalInstall };
+           solarRate, batteryRate, extraInvRate, removePanRate,
+           installerCustomItems, installerCustomTotal, totalInstall };
 }
 
 function generatePurchaseOrderHTML() {
@@ -3324,6 +3344,12 @@ function generatePurchaseOrderHTML() {
       <td style="text-align:right">$15.00 / panel</td>
       <td style="text-align:right">${fmt(rates.removePanRate)}</td>
     </tr>` : ''}
+    ${rates.installerCustomItems.map(li => `<tr>
+      <td>${li.customName || 'Custom Item'}</td>
+      <td>${li.qty > 1 ? `${li.qty} × ` : ''}—</td>
+      <td style="text-align:right">${li.qty > 1 ? fmt(li.customCost || 0) + ' / unit' : '—'}</td>
+      <td style="text-align:right">${fmt((li.customCost || 0) * li.qty)}</td>
+    </tr>`).join('')}
     ${rates.travel > 0 ? `<tr>
       <td>Travel Allowance</td>
       <td>—</td>
