@@ -666,9 +666,12 @@
             Change
           </button>
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
           <button onclick="openQuotePanel()" style="padding:9px 16px;font-size:13px;font-weight:600;border-radius:6px;cursor:pointer;border:1.5px solid #1565c0;background:white;color:#1565c0;">
             📂 Open Quote
+          </button>
+          <button onclick="startNewQuote()" style="padding:9px 16px;font-size:13px;font-weight:600;border-radius:6px;cursor:pointer;border:1.5px solid #e65100;background:white;color:#e65100;">
+            🆕 New Quote
           </button>
           <button class="btn-save" onclick="saveQuote()">💾 Save Quote</button>
         </div>
@@ -2436,6 +2439,34 @@ function clearRecentQuotes() {
   renderRecentQuotesList();
 }
 
+// ── New Quote — clears form and advances to the next quote number ──
+function startNewQuote() {
+  const hasContent = lineItems.length > 0 ||
+    document.getElementById('customerName').value.trim() ||
+    document.getElementById('quoteRef').value.trim();
+  if (hasContent) {
+    if (!confirm('Start a new quote? Any unsaved changes to the current quote will be lost.')) return;
+  }
+
+  // Commit current number so it won't be reused, then advance
+  const cur = parseInt(document.getElementById('quoteRef').value.trim());
+  if (!isNaN(cur) && cur >= 1000000) commitQuoteNum(cur);
+
+  lineItems.length = 0;
+  rowCounter       = 0;
+  stcOverridden    = false;
+
+  document.getElementById('customerName').value    = '';
+  document.getElementById('quoteRef').value        = String(getNextQuoteNum());
+  document.getElementById('quoteDate').value       = new Date().toISOString().split('T')[0];
+  const addrEl  = document.getElementById('customerAddress'); if (addrEl)  addrEl.value  = '';
+  const emailEl = document.getElementById('customerEmail');   if (emailEl) emailEl.value = '';
+  const phoneEl = document.getElementById('customerPhone');   if (phoneEl) phoneEl.value = '';
+
+  renderTable();
+  autoCalcStcs();
+}
+
 // ── Folder handle persistence (IndexedDB) ──
 // Stores the FileSystemDirectoryHandle across sessions so the user only
 // needs to pick the Customers folder once. Chrome auto-grants permission
@@ -2584,8 +2615,6 @@ async function saveQuote() {
         if (data.ok) {
           storeRecentQuote(state);
           commitQuoteNum(quoteNum);
-          refField.value = String(quoteNum + 1);
-          recalculate();
           const original = saveBtn.textContent;
           saveBtn.textContent = `✅ Saved! #${quoteNum} (both copies)`;
           saveBtn.style.background = '#1b5e20';
@@ -2637,9 +2666,6 @@ async function saveQuote() {
       await stateWrite.write(stateJson);
       await stateWrite.close();
 
-      refField.value = String(quoteNum + 1);
-      recalculate();
-
       const original = saveBtn.textContent;
       saveBtn.textContent = `✅ Saved! #${quoteNum} (both copies)`;
       saveBtn.style.background = '#1b5e20';
@@ -2660,8 +2686,6 @@ async function saveQuote() {
       dl(quoteHtml,    `Pi Quote - ${customerName}.html`,         'text/html');
       dl(customerHtml, `Customer Copy - ${customerName}.html`,    'text/html');
       dl(stateJson,    `pi-quote-state - ${customerName}.json`,   'application/json');
-      refField.value = String(quoteNum + 1);
-      recalculate();
     }
   } catch (err) {
     if (err.name !== 'AbortError') { console.error('Save failed:', err); alert('Could not save: ' + err.message); }
