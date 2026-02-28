@@ -927,8 +927,8 @@ const PRODUCTS = [
     specs: '2× 5kW Inverters | 8× Battery Modules (40kWh usable / 5kWh per module) | 2× Base | 2× Meter',
     unit: 'kit',
     inverterKw: 10,      // 2 × 5kW — used for solar STC calc if solar panels added
-    batteryKwh: 40,         // usable kWh only — nominal not yet confirmed by manufacturer
-    batteryNominalKwh: 40,  // ⚠️ using usable as nominal until actual spec confirmed — update when available
+    batteryKwh: 40,          // usable kWh (8 × 5kWh modules)
+    batteryNominalKwh: 42.4, // actual/nominal kWh (8 × 5.3kWh modules)
     extraInverterQty: 1, // 2 inverters in kit — 1 extra beyond the standard first inverter
     defaultIncluded: false,
   },
