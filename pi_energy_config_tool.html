@@ -3291,8 +3291,10 @@ function generatePurchaseOrderHTML() {
 <div class="party-grid" style="grid-template-columns:${installer ? '1fr 1fr 1fr' : '1fr 1fr'}">
   <div class="box">
     <h3>Issued By</h3>
-    <p><strong>Pi Energy Systems</strong></p>
-    <p style="color:#7a8a9e;">Internal document · not for external distribution</p>
+    <p><strong>Pi Ops Pty Ltd</strong></p>
+    <p style="color:#7a8a9e;margin:2px 0;">ABN: 85 685 996 114</p>
+    <p style="margin:2px 0;">Trading as <strong>Principle and Innovation (Pi)</strong></p>
+    <p style="color:#7a8a9e;margin-top:4px;">Internal document · not for external distribution</p>
   </div>
   <div class="box">
     <h3>Installation Address / Customer</h3>
@@ -3372,8 +3374,16 @@ function generatePurchaseOrderHTML() {
   </tbody>
   <tfoot>
     <tr>
-      <td colspan="3">Total Installer Payment (ex GST)</td>
+      <td colspan="3">Subtotal (ex GST)</td>
       <td style="text-align:right">${fmt(rates.totalInstall)}</td>
+    </tr>
+    <tr>
+      <td colspan="3">GST (10%)</td>
+      <td style="text-align:right">${fmt(rates.totalInstall * 0.10)}</td>
+    </tr>
+    <tr style="font-size:14px;">
+      <td colspan="3"><strong>Total Installer Payment (inc GST)</strong></td>
+      <td style="text-align:right"><strong>${fmt(rates.totalInstall * 1.10)}</strong></td>
     </tr>
   </tfoot>
 </table>
@@ -3381,7 +3391,7 @@ function generatePurchaseOrderHTML() {
 <div class="sig-box">
   <div>
     <div style="height:50px;"></div>
-    <div class="sig-line">Authorised by (Pi Energy Systems) &nbsp;&nbsp;&nbsp; Date: ___________</div>
+    <div class="sig-line">Authorised by (Principle and Innovation / Pi Ops Pty Ltd) &nbsp;&nbsp;&nbsp; Date: ___________</div>
   </div>
   <div>
     <div style="height:50px;"></div>
