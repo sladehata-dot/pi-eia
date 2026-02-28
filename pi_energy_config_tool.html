@@ -888,7 +888,8 @@ const PRODUCTS = [
     suppliers: ['tz', 'osw'],
     specs: '5.99 kWh | Master + Slave config',
     unit: 'module',
-    batteryKwh: 5.99,        // used for STC battery calc
+    batteryKwh: 5.99,        // usable kWh — used for STC battery calc
+    batteryNominalKwh: 5.99,  // actual/nominal size for display
     defaultIncluded: false,
   },
   // ── FOXESS EQ4800 HIGH VOLTAGE BATTERIES (RED) ──
@@ -900,7 +901,8 @@ const PRODUCTS = [
     suppliers: ['red'],
     specs: 'Model: EQ4800-M | 4.66kWh nominal | 4.194kWh usable | High Voltage | Master unit (required first)',
     unit: 'module',
-    batteryKwh: 4.194,   // usable kWh per module (used for STC calc)
+    batteryKwh: 4.194,        // usable kWh per module (used for STC calc)
+    batteryNominalKwh: 4.66,  // actual/nominal kWh per module
     defaultIncluded: false,
   },
   {
@@ -911,7 +913,8 @@ const PRODUCTS = [
     suppliers: ['red'],
     specs: 'Model: EQ4800-S | 4.66kWh nominal | 4.194kWh usable | High Voltage | Slave unit (add to Master)',
     unit: 'module',
-    batteryKwh: 4.194,   // usable kWh per module (used for STC calc)
+    batteryKwh: 4.194,        // usable kWh per module (used for STC calc)
+    batteryNominalKwh: 4.66,  // actual/nominal kWh per module
     defaultIncluded: false,
   },
   // ── HYXIPOWER KITS (AZ Energy) ──
@@ -924,7 +927,8 @@ const PRODUCTS = [
     specs: '2× 5kW Inverters | 8× Battery Modules (40kWh usable / 5kWh per module) | 2× Base | 2× Meter',
     unit: 'kit',
     inverterKw: 10,      // 2 × 5kW — used for solar STC calc if solar panels added
-    batteryKwh: 40,      // 40kWh usable (8 × 5kWh modules) — confirmed by Pi Energy
+    batteryKwh: 40,         // usable kWh only — nominal not yet confirmed by manufacturer
+    batteryNominalKwh: 40,  // ⚠️ using usable as nominal until actual spec confirmed — update when available
     extraInverterQty: 1, // 2 inverters in kit — 1 extra beyond the standard first inverter
     defaultIncluded: false,
   },
@@ -2739,7 +2743,7 @@ function generateCustomerQuoteHTML() {
         costEx    = c * li.qty;
         lineLabel = prod.name;
         lineDesc  = prod.specs;
-        if (prod.batteryKwh) batteryKwhSum += prod.batteryKwh * li.qty;
+        if (prod.batteryKwh) batteryKwhSum += (prod.batteryNominalKwh || prod.batteryKwh) * li.qty;
       }
     }
 
@@ -2923,11 +2927,11 @@ ${totalRebate > 0 ? `
 </div>
 
 <div style="background:#e8f5e9;border:1px solid #a5d6a7;border-left:5px solid #2e7d32;border-radius:8px;padding:14px 18px;margin-bottom:16px;font-size:13px;color:#1b4332;">
-  🛡️ <strong>10-Year Workmanship Warranty</strong><br>
+  🛡️ <strong>10-Year Installation Warranty Period</strong><br>
   <span style="display:block;margin-top:5px;line-height:1.6;">
-    Pi Energy Systems provides a <strong>10-year workmanship warranty</strong> covering all solar panel and battery installation work.
-    This warranty guarantees the quality of our installation against defects in workmanship for the full 10-year period.
-    Product warranties are provided separately by the respective manufacturers and run concurrently.
+    Pi Energy Systems provides a <strong>10-year warranty period</strong> on installation workmanship only.
+    All product warranties are as per the respective manufacturers.
+    Pi Energy does not offer any warranties outside of those provided by the product suppliers and manufacturers.
   </span>
 </div>
 
@@ -3042,6 +3046,13 @@ function generateQuoteHTML() {
   const grossInc    = sellPriceEx * 1.10;
 
   const stcData = getBatterySolarStcs();
+  // Nominal (actual) battery kWh for display — separate from usable kWh used in STC calc
+  const batteryNominalKwhTotal = lineItems.reduce((sum, li) => {
+    if (li.isCustom) return sum;
+    const p = PRODUCTS.find(pr => pr.id === li.productId);
+    if (!p) return sum;
+    return sum + (p.batteryNominalKwh || p.batteryKwh || 0) * li.qty;
+  }, 0);
   const { inverterStcs, batteryStcs, solarKwForStc, batteryKwhTotal,
           demYears, zoneFactor, batteryFactor, year } = stcData;
   const hasSolar   = solarKwForStc > 0;
@@ -3177,11 +3188,11 @@ ${(hasSolar || hasBattery) ? `
 <div class="stc-note">
   <strong>STC Calculation Detail:</strong><br>
   ${hasSolar ? `☀️ Solar: ${solarKwForStc.toFixed(2)}kW × zone factor (${zoneFactor}) × ${demYears} deeming years = <strong>${inverterStcs} STCs</strong> @ $${stcRateSolar.toFixed(0)}/STC. ` : ''}
-  ${hasBattery ? `🔋 Battery: ${batteryKwhTotal.toFixed(2)}kWh × ${batteryFactor} (${year} CER flat rate, no zone) = <strong>${batteryStcs} STCs</strong> @ $${stcRateBattery.toFixed(0)}/STC (govt clearing house).` : ''}
+  ${hasBattery ? `🔋 Battery: ${batteryNominalKwhTotal.toFixed(2)}kWh actual | ${batteryKwhTotal.toFixed(2)}kWh usable × ${batteryFactor} (${year} CER flat rate, no zone) = <strong>${batteryStcs} STCs</strong> @ ${stcRateBattery.toFixed(0)}/STC (govt clearing house).` : ''}
 </div>` : ''}
 
 <div class="stc-note" style="background:#e8f5e9;border-color:#a5d6a7;border-left:4px solid #2e7d32;color:#1b4332;">
-  🛡️ <strong>10-Year Workmanship Warranty</strong> — applies to all solar &amp; battery installation work. Product warranties run concurrently from respective manufacturers.
+  🛡️ <strong>10-Year Installation Warranty Period</strong> — workmanship only. All product warranties as per respective manufacturers. Pi Energy provides no warranties outside of supplier/manufacturer warranties.
 </div>
 
 <div class="footer">
