@@ -576,6 +576,7 @@
       <!-- Battery note -->
       <div class="battery-note" id="batteryNote">
         🔋 <strong>Battery Configuration:</strong> First module = <strong>Master</strong>, additional modules = <strong>Slave</strong>. All modules same price ($1,700 ex GST).
+        &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Backup Circuits Included:</strong> ❄️ Refrigeration (food preservation) &nbsp;·&nbsp; 💡 Lighting &nbsp;·&nbsp; 📡 Communications (internet · TV · phone charging)
       </div>
 
       <!-- Controls: Margin + STC -->
@@ -811,6 +812,75 @@ const SUPPLIERS = [
   { id: 'az',  name: 'AZ Energy / HyXiPower' },
   { id: 'pi',  name: 'Pi Energy (internal)' },
 ];
+
+// ── Custom Suppliers — persisted to localStorage so new suppliers survive page reloads ──
+const CUSTOM_SUPPLIERS_KEY  = 'pi_custom_suppliers';
+const BUILTIN_SUPPLIER_IDS  = ['tz', 'osw', 'red', 'az', 'pi'];
+
+function loadCustomSuppliers() {
+  try {
+    const custom = JSON.parse(localStorage.getItem(CUSTOM_SUPPLIERS_KEY) || '[]');
+    custom.forEach(s => {
+      if (!SUPPLIERS.find(ex => ex.id === s.id)) SUPPLIERS.push(s);
+    });
+  } catch (_) {}
+}
+
+function saveCustomSuppliers() {
+  const custom = SUPPLIERS.filter(s => !BUILTIN_SUPPLIER_IDS.includes(s.id) && !INSTALLERS.find(i => i.id === s.id));
+  localStorage.setItem(CUSTOM_SUPPLIERS_KEY, JSON.stringify(custom));
+}
+
+function addNewSupplier(name, rowId) {
+  const trimmed = name.trim();
+  if (!trimmed) return;
+  const id = 'custom-' + trimmed.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/, '');
+  let sup = SUPPLIERS.find(s => s.id === id || s.name.toLowerCase() === trimmed.toLowerCase());
+  if (!sup) {
+    sup = { id, name: trimmed };
+    SUPPLIERS.push(sup);
+    saveCustomSuppliers();
+  }
+  const li = lineItems.find(l => l.rowId === rowId);
+  if (li) li.supplierId = sup.id;
+  renderTable();
+  recalculate();
+}
+
+function promptNewSupplier(rowId) {
+  const existing = document.getElementById('newSupplierModal');
+  if (existing) existing.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'newSupplierModal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:10000;display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML = `
+    <div style="background:white;border-radius:10px;padding:24px 28px;min-width:320px;box-shadow:0 8px 32px rgba(0,0,0,0.25);" onclick="event.stopPropagation()">
+      <h3 style="margin:0 0 14px;font-size:15px;color:#1a2332;">Add New Supplier</h3>
+      <input id="newSupplierNameInput" type="text" placeholder="Supplier / distributor name"
+        style="width:100%;padding:8px 12px;border:1.5px solid #dce3ec;border-radius:6px;font-size:14px;margin-bottom:14px;outline:none;box-sizing:border-box;">
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button onclick="document.getElementById('newSupplierModal').remove()"
+          style="padding:7px 16px;border:1.5px solid #dce3ec;border-radius:6px;background:white;color:#5a6a7e;cursor:pointer;font-size:13px;">Cancel</button>
+        <button onclick="confirmNewSupplier('${rowId}')"
+          style="padding:7px 16px;border:none;border-radius:6px;background:#1565c0;color:white;cursor:pointer;font-size:13px;font-weight:600;">Add Supplier</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  const inp = document.getElementById('newSupplierNameInput');
+  inp.focus();
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter')  { confirmNewSupplier(rowId); }
+    if (e.key === 'Escape') { overlay.remove(); }
+  });
+  overlay.addEventListener('click', () => overlay.remove());
+}
+
+function confirmNewSupplier(rowId) {
+  const inp = document.getElementById('newSupplierNameInput');
+  const name = inp ? inp.value.trim() : '';
+  document.getElementById('newSupplierModal')?.remove();
+  if (name) addNewSupplier(name, rowId);
+}
 
 const INSTALLERS = [
   {
@@ -1079,6 +1149,9 @@ let rowCounter = 0;
 // ═══════════════════════════════════════════════════
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Load any custom suppliers persisted from previous sessions
+  loadCustomSuppliers();
+
   // Set today's date
   document.getElementById('quoteDate').value = new Date().toISOString().split('T')[0];
 
@@ -1105,6 +1178,19 @@ document.addEventListener('DOMContentLoaded', () => {
   PRODUCTS.filter(p => p.defaultIncluded).forEach(p => {
     addProductById(p.id, p.suppliers[0]);
   });
+
+  // Make each installer available as a selectable supplier for labour rows
+  INSTALLERS.forEach(inst => {
+    if (!SUPPLIERS.find(s => s.id === inst.id)) {
+      SUPPLIERS.push({ id: inst.id, name: inst.company });
+    }
+  });
+  const labourProd = PRODUCTS.find(p => p.id === 'labour');
+  if (labourProd) {
+    INSTALLERS.forEach(inst => {
+      if (!labourProd.suppliers.includes(inst.id)) labourProd.suppliers.push(inst.id);
+    });
+  }
 
   // Populate installer dropdown
   const instSel = document.getElementById('installerSelect');
@@ -1140,6 +1226,12 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     })
     .catch(() => { /* server not running — that's fine, use picker */ });
+
+  // Restore previously-chosen Customers folder from IndexedDB
+  // (so saves go to the remembered path without showing a picker every time)
+  loadCustomersHandle().then(h => {
+    if (h) { customersHandleCache = h; updateFolderIndicator(h.name); }
+  }).catch(() => {});
 
   // Set STC alert
   updateStcAlert();
@@ -1559,10 +1651,11 @@ function renderTable() {
     }
 
     const catClass     = `cat-${prod.category.toLowerCase()}`;
-    const supplierOpts = prod.suppliers.map(sid => {
-      const sup = SUPPLIERS.find(s => s.id === sid);
-      return `<option value="${sid}" ${sid === li.supplierId ? 'selected' : ''}>${sup.name}</option>`;
-    }).join('');
+    // Show all suppliers (default ones for this product marked, others available, plus add-new)
+    const defaultSids = new Set(prod.suppliers);
+    const supplierOpts = SUPPLIERS.map(s =>
+      `<option value="${s.id}" ${s.id === li.supplierId ? 'selected' : ''}>${s.name}${defaultSids.has(s.id) ? '' : ' *'}</option>`
+    ).join('') + `<option value="__add_new__" style="color:#1565c0;font-style:italic;">➕ Add new supplier…</option>`;
 
     // Cost cell — all non-solar products show an editable input; overridden values get a reset link
     let costCell;
@@ -1804,6 +1897,7 @@ function updateQty(rowId, val) {
 }
 
 function updateSupplier(rowId, val) {
+  if (val === '__add_new__') { promptNewSupplier(rowId); return; }
   const li = lineItems.find(l => l.rowId === rowId);
   if (li) li.supplierId = val;
   recalculate();
@@ -2080,6 +2174,8 @@ function recalculate() {
   let totalCostEx = 0;
   const supplierTotals = {};
   SUPPLIERS.forEach(s => supplierTotals[s.id] = 0);
+  // Ensure any custom suppliers assigned to line items are tracked
+  lineItems.forEach(li => { if (!(li.supplierId in supplierTotals)) supplierTotals[li.supplierId] = 0; });
 
   lineItems.forEach(li => {
     // Custom ad-hoc items
@@ -2526,8 +2622,14 @@ function updateInstallerInfo() {
     panel.style.display = 'block';
     panel.innerHTML = `<strong>${inst.company}</strong><br>${inst.address}<br>
       Ph: ${inst.companyPhone}${inst.contact !== inst.company ? `&nbsp;·&nbsp;Contact: ${inst.contact} ${inst.contactPhone}` : ''}`;
+    // Auto-sync labour line item supplier to the selected installer
+    const labourItem = lineItems.find(li => li.productId === 'labour');
+    if (labourItem) { labourItem.supplierId = inst.id; renderTable(); }
   } else {
     panel.style.display = 'none';
+    // Reset labour supplier back to Pi Energy when installer is cleared
+    const labourItem = lineItems.find(li => li.productId === 'labour');
+    if (labourItem) { labourItem.supplierId = 'pi'; renderTable(); }
   }
 }
 
@@ -2897,10 +2999,20 @@ ${systemBadge ? `<div class="system-banner">${systemBadge}</div>` : ''}
   <h3>💰 Your Investment</h3>
   <div class="prow"><span class="lbl">System total (inc GST)</span><span class="val">${fmt(grossInc)}</span></div>
   <div class="prow gst"><span class="lbl">GST included (10%)</span><span class="val">${fmt(gstAmt)}</span></div>
-  ${totalRebate > 0 ? `
+  ${solarRebate > 0 ? `
   <div class="prow rebate">
-    <span class="lbl">🏛️ Government Rebate (STC scheme)</span>
-    <span class="val">−${fmt(totalRebate)}</span>
+    <span class="lbl">☀️ Solar STC Rebate <span style="font-weight:400;font-size:11px;color:#4a7a4a;">(${useSolarStcs} certificates × $${stcRateSolar.toFixed(0)}/STC)</span></span>
+    <span class="val">−${fmt(solarRebate)}</span>
+  </div>` : ''}
+  ${batteryRebate > 0 ? `
+  <div class="prow rebate">
+    <span class="lbl">🔋 Battery STC Rebate <span style="font-weight:400;font-size:11px;color:#4a7a4a;">(${batteryStcs} certificates × $${stcRateBattery.toFixed(0)}/STC)</span></span>
+    <span class="val">−${fmt(batteryRebate)}</span>
+  </div>` : ''}
+  ${hasSolar && hasBattery && totalRebate > 0 ? `
+  <div class="prow" style="border-top:1px dashed #a5d6a7;margin-top:3px;padding-top:7px;">
+    <span class="lbl" style="color:#2e7d32;font-weight:700;">🏛️ Total Government Rebate</span>
+    <span class="val" style="color:#2e7d32;font-size:15px;">−${fmt(totalRebate)}</span>
   </div>` : ''}
 </div>
 
@@ -2914,11 +3026,10 @@ ${systemBadge ? `<div class="system-banner">${systemBadge}</div>` : ''}
 
 ${totalRebate > 0 ? `
 <div class="rebate-note">
-  <strong>🏛️ About Your Government Rebate</strong>
-  The Small-scale Technology Certificate (STC) scheme is a Federal Government incentive
-  that reduces the upfront cost of eligible solar and battery systems. Your rebate of
-  <strong>${fmt(totalRebate)}</strong> has been applied directly to the price above —
-  there is nothing further for you to claim.
+  <strong>🏛️ About Your Government Rebate${hasSolar && hasBattery ? 's' : ''}</strong>
+  ${hasSolar ? `<span style="display:block;margin-top:4px;">☀️ <strong>Solar — ${fmt(solarRebate)}:</strong> ${useSolarStcs} Small-scale Technology Certificates at the current market rate ($${stcRateSolar.toFixed(0)}/STC).</span>` : ''}
+  ${hasBattery ? `<span style="display:block;margin-top:4px;">🔋 <strong>Battery — ${fmt(batteryRebate)}:</strong> ${batteryStcs} battery STCs at the government clearing house rate ($${stcRateBattery.toFixed(0)}/STC).</span>` : ''}
+  <span style="display:block;margin-top:6px;">Your ${hasSolar && hasBattery ? `combined rebate of <strong>${fmt(totalRebate)}</strong>` : `rebate of <strong>${fmt(totalRebate)}</strong>`} has been applied directly to the price above — there is nothing further for you to claim.</span>
 </div>` : ''}
 
 <div class="validity">
@@ -3340,6 +3451,12 @@ function generatePurchaseOrderHTML() {
     <p><strong>Pi Ops Pty Ltd</strong></p>
     <p style="color:#7a8a9e;margin:2px 0;">ABN: 85 685 996 114</p>
     <p style="margin:2px 0;">Trading as <strong>Principle and Innovation (Pi)</strong></p>
+    <p style="margin-top:6px;border-top:1px solid #e0e8f0;padding-top:6px;margin-bottom:2px;">
+      <a href="mailto:admin@principleinnovation.tech" style="color:#1565c0;text-decoration:none;font-size:11.5px;">admin@principleinnovation.tech</a>
+    </p>
+    <p style="margin:2px 0;font-size:11.5px;color:#1a2332;">Contact <strong>Slade Hata</strong> &nbsp;
+      <a href="tel:0403944008" style="color:#1565c0;font-weight:600;text-decoration:none;">0403 944 008</a>
+    </p>
   </div>
   <div class="box">
     <h3>Installation Address / Customer</h3>
@@ -3387,7 +3504,11 @@ function generatePurchaseOrderHTML() {
       <td style="text-align:right">${fmt(rates.solarRate)}</td>
     </tr>` : ''}
     ${rates.batteryQty > 0 ? `<tr>
-      <td>Battery Installation</td>
+      <td>Battery Installation
+        <div style="font-size:10.5px;color:#5a6a7e;margin-top:3px;">
+          Includes backup circuit configuration: ❄️ Refrigeration (food preservation) &nbsp;·&nbsp; 💡 Lighting &nbsp;·&nbsp; 📡 Communications (internet · TV · phone charging)
+        </div>
+      </td>
       <td>${rates.batteryQty} module${rates.batteryQty > 1 ? 's' : ''}</td>
       <td style="text-align:right">$1,500.00 / unit</td>
       <td style="text-align:right">${fmt(rates.batteryRate)}</td>
