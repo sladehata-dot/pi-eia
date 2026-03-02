@@ -969,9 +969,9 @@ const PRODUCTS = [
     category: 'Battery',
     costExGst: 1430,
     suppliers: ['red'],
-    specs: 'Model: EQ4800-M | 4.66kWh nominal | 4.194kWh usable | High Voltage | Master unit (required first)',
+    specs: 'Model: EQ4800-M | 4.66kWh | High Voltage | Master unit (required first)',
     unit: 'module',
-    batteryKwh: 4.194,        // usable kWh per module (used for STC calc)
+    batteryKwh: 4.66,         // 100% usable for STC purposes (FoxESS confirmed)
     batteryNominalKwh: 4.66,  // actual/nominal kWh per module
     defaultIncluded: false,
   },
@@ -981,9 +981,9 @@ const PRODUCTS = [
     category: 'Battery',
     costExGst: 1320,
     suppliers: ['red'],
-    specs: 'Model: EQ4800-S | 4.66kWh nominal | 4.194kWh usable | High Voltage | Slave unit (add to Master)',
+    specs: 'Model: EQ4800-S | 4.66kWh | High Voltage | Slave unit (add to Master)',
     unit: 'module',
-    batteryKwh: 4.194,        // usable kWh per module (used for STC calc)
+    batteryKwh: 4.66,         // 100% usable for STC purposes (FoxESS confirmed)
     batteryNominalKwh: 4.66,  // actual/nominal kWh per module
     defaultIncluded: false,
   },
