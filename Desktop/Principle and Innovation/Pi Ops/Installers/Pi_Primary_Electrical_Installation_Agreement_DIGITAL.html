@@ -1,0 +1,2044 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pi – Primary Electrical Installation Agreement</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --navy: #0D1B2A;
+    --blue: #0A84FF;
+    --blue-light: #3AA0FF;
+    --blue-pale: #E8F3FF;
+    --gray-bg: #F5F7FA;
+    --gray-mid: #E2E8F0;
+    --gray-text: #6B7280;
+    --body-text: #111827;
+    --green: #10B981;
+    --amber: #F59E0B;
+    --red: #EF4444;
+    --font: 'Segoe UI', -apple-system, Arial, sans-serif;
+    --radius: 10px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.08);
+  }
+  body {
+    font-family: var(--font);
+    color: var(--body-text);
+    background: #EBEEF2;
+    font-size: 14px;
+    line-height: 1.65;
+  }
+  .page-wrapper {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 24px 16px 60px;
+  }
+
+  /* ── HEADER ───────────────────────────────────────── */
+  .doc-header {
+    background: var(--navy);
+    border-radius: var(--radius) var(--radius) 0 0;
+    padding: 36px 40px 28px;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+  }
+  .doc-header::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 220px; height: 220px;
+    background: rgba(10,132,255,0.12);
+    border-radius: 50%;
+  }
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .brand-mark {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .brand-icon {
+    width: 48px; height: 48px;
+    background: var(--blue);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 900; color: #fff;
+    flex-shrink: 0;
+  }
+  .brand-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--blue-light);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+  .brand-sub {
+    font-size: 11px;
+    color: rgba(255,255,255,0.55);
+    margin-top: 2px;
+    font-style: italic;
+  }
+  .doc-badge {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    padding: 10px 18px;
+    text-align: center;
+    font-size: 11px;
+    color: rgba(255,255,255,0.7);
+    letter-spacing: 0.5px;
+  }
+  .doc-badge strong {
+    display: block;
+    font-size: 13px;
+    color: #fff;
+    margin-top: 3px;
+  }
+  .doc-title {
+    margin-top: 28px;
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+    line-height: 1.2;
+  }
+  .doc-subtitle {
+    margin-top: 6px;
+    font-size: 13px;
+    color: rgba(255,255,255,0.6);
+    letter-spacing: 0.5px;
+  }
+
+  /* ── PARTY CARDS ─────────────────────────────────── */
+  .parties-row {
+    display: grid;
+    grid-template-columns: 1fr 40px 1fr;
+    gap: 0;
+    background: #fff;
+    padding: 0;
+  }
+  .party-card {
+    background: var(--gray-bg);
+    padding: 24px 28px;
+  }
+  .party-card.pi-side { background: #fff; border-right: none; }
+  .party-divider {
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .party-divider::before {
+    content: '';
+    display: block;
+    width: 1px;
+    height: 100%;
+    background: var(--gray-mid);
+  }
+  .party-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--blue);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .party-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 4px;
+  }
+  .party-detail {
+    font-size: 12px;
+    color: var(--gray-text);
+    line-height: 1.7;
+  }
+  .party-detail a { color: var(--blue); text-decoration: none; }
+
+  /* Installer input fields */
+  .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 2px;
+  }
+  .field-row {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    align-items: center;
+    gap: 8px;
+  }
+  .field-lbl {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--gray-text);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .field-input {
+    border: none;
+    border-bottom: 2px solid var(--gray-mid);
+    background: transparent;
+    padding: 4px 0;
+    font-size: 13px;
+    font-family: var(--font);
+    color: var(--body-text);
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+  .field-input:focus { border-bottom-color: var(--blue); }
+  .field-input::placeholder { color: #ccc; font-style: italic; }
+
+  /* ── META ROW (Date / Ref) ───────────────────────── */
+  .meta-row {
+    background: var(--navy);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+  }
+  .meta-cell {
+    background: rgba(255,255,255,0.05);
+    padding: 14px 28px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .meta-cell:first-child { background: rgba(10,132,255,0.15); }
+  .meta-lbl {
+    font-size: 10px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.5);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+  .meta-input {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(255,255,255,0.25);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: var(--font);
+    padding: 2px 0;
+    outline: none;
+    min-width: 160px;
+    flex: 1;
+  }
+  .meta-input::placeholder { color: rgba(255,255,255,0.3); font-style: italic; font-weight: 400; }
+  .meta-input:focus { border-bottom-color: var(--blue); }
+
+  /* ── BODY ─────────────────────────────────────────── */
+  .doc-body {
+    background: #fff;
+    border-radius: 0 0 var(--radius) var(--radius);
+    padding: 0 40px 40px;
+    box-shadow: var(--shadow);
+  }
+
+  /* ── SECTION ─────────────────────────────────────── */
+  .section {
+    border-top: 1px solid var(--gray-mid);
+    padding-top: 32px;
+    margin-top: 32px;
+  }
+  .section:first-of-type { margin-top: 32px; }
+  .section-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .section-num {
+    background: var(--blue);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    width: 28px; height: 28px;
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+    letter-spacing: 0.5px;
+  }
+  .section-title-group {}
+  .section-tag {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--blue);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 3px;
+  }
+  .section-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--navy);
+  }
+
+  /* ── SUBSECTION ──────────────────────────────────── */
+  .subsection {
+    background: var(--gray-bg);
+    border-radius: 8px;
+    padding: 18px 22px;
+    margin-bottom: 14px;
+  }
+  .subsection-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--navy);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .subsection-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--gray-mid);
+  }
+  .body-text {
+    font-size: 13.5px;
+    color: #374151;
+    line-height: 1.75;
+  }
+  .body-text + .body-text { margin-top: 10px; }
+
+  /* ── TABLES ──────────────────────────────────────── */
+  .fee-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin: 12px 0;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .fee-table thead th {
+    background: var(--navy);
+    color: #fff;
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .fee-table thead th:not(:first-child) { text-align: right; }
+  .fee-table tbody tr:nth-child(even) { background: var(--gray-bg); }
+  .fee-table tbody td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--gray-mid);
+    vertical-align: top;
+  }
+  .fee-table tbody td:not(:first-child) { text-align: right; font-weight: 600; }
+  .fee-table tbody td.note { text-align: left; font-size: 12px; color: var(--gray-text); font-weight: 400; }
+  .table-category {
+    background: var(--blue-pale);
+    font-weight: 700;
+    font-size: 11px;
+    color: var(--navy);
+    padding: 8px 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--gray-mid);
+  }
+
+  /* Hardware allocation table */
+  .hw-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin: 12px 0;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .hw-table thead th {
+    background: var(--navy);
+    color: #fff;
+    padding: 9px 12px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .hw-table thead th:first-child { text-align: left; }
+  .hw-table tbody tr:nth-child(even) { background: var(--gray-bg); }
+  .hw-table tbody td {
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--gray-mid);
+    text-align: center;
+    font-size: 13px;
+  }
+  .hw-table tbody td:first-child { text-align: left; }
+  .check { color: var(--blue); font-size: 15px; font-weight: 700; }
+  .neg { color: var(--amber); font-size: 12px; font-weight: 600; }
+
+  /* ── CALLOUT BOXES ───────────────────────────────── */
+  .callout {
+    border-left: 4px solid var(--blue);
+    background: var(--blue-pale);
+    border-radius: 0 8px 8px 0;
+    padding: 14px 18px;
+    margin: 14px 0;
+    font-size: 13px;
+    color: #1e3a5f;
+  }
+  .callout.warn {
+    border-color: var(--amber);
+    background: #FFFBEB;
+    color: #78350f;
+  }
+  .callout.success {
+    border-color: var(--green);
+    background: #ECFDF5;
+    color: #065f46;
+  }
+  .callout-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 6px;
+  }
+
+  /* ── LIST ────────────────────────────────────────── */
+  .doc-list {
+    list-style: none;
+    padding: 0;
+    margin: 8px 0 8px 0;
+  }
+  .doc-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 13px;
+    color: #374151;
+    padding: 3px 0;
+    line-height: 1.6;
+  }
+  .doc-list li::before {
+    content: '›';
+    color: var(--blue);
+    font-size: 15px;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 0px;
+  }
+
+  /* ── CPP TIERS ───────────────────────────────────── */
+  .tier-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-top: 14px;
+  }
+  .tier-card {
+    border: 2px solid var(--gray-mid);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .tier-card.tier-1 { border-color: #94a3b8; }
+  .tier-card.tier-2 { border-color: var(--blue); }
+  .tier-card.tier-3 { border-color: #7c3aed; }
+  .tier-head {
+    padding: 14px 16px;
+    text-align: center;
+  }
+  .tier-1 .tier-head { background: #f1f5f9; }
+  .tier-2 .tier-head { background: var(--blue); color: #fff; }
+  .tier-3 .tier-head { background: #5b21b6; color: #fff; }
+  .tier-level {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    opacity: 0.7;
+    margin-bottom: 4px;
+  }
+  .tier-2 .tier-level, .tier-3 .tier-level { opacity: 0.8; }
+  .tier-name {
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.25;
+  }
+  .tier-body {
+    padding: 14px 16px;
+    font-size: 12px;
+    color: #374151;
+    line-height: 1.6;
+  }
+  .tier-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 3px 0;
+    border-bottom: 1px solid var(--gray-mid);
+  }
+  .tier-item:last-child { border-bottom: none; }
+  .tier-item-icon { color: var(--blue); font-weight: 700; flex-shrink: 0; }
+  .tier-2 .tier-item-icon { color: #2563eb; }
+  .tier-3 .tier-item-icon { color: #7c3aed; }
+  .tier-sub {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--gray-text);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding: 8px 0 2px;
+  }
+
+  /* ── SCHEDULE A TABLE ────────────────────────────── */
+  .schedule-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+  }
+  .schedule-table thead th {
+    background: var(--gray-bg);
+    color: var(--navy);
+    padding: 8px 12px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid var(--gray-mid);
+    text-align: left;
+  }
+  .schedule-table tbody tr { border-bottom: 1px solid var(--gray-mid); }
+  .schedule-table tbody tr:hover { background: var(--gray-bg); }
+  .schedule-table tbody td { padding: 9px 12px; vertical-align: top; line-height: 1.5; }
+  .schedule-table tbody td:first-child { font-weight: 600; color: var(--navy); }
+  .schedule-table tbody td.highlight { background: #EFF6FF; }
+  .badge {
+    display: inline-block;
+    background: var(--blue-pale);
+    color: var(--blue);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── EXECUTION / SIGNATURE ───────────────────────── */
+  .execution-section {
+    border-top: 3px solid var(--navy);
+    padding-top: 32px;
+    margin-top: 40px;
+  }
+  .execution-title {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--navy);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 8px;
+  }
+  .execution-intro {
+    font-size: 13px;
+    color: var(--gray-text);
+    margin-bottom: 28px;
+  }
+  .sig-grid {
+    display: grid;
+    grid-template-columns: 1fr 40px 1fr;
+    gap: 0;
+  }
+  .sig-block {
+    padding: 0 16px 0 0;
+  }
+  .sig-block.right-sig { padding: 0 0 0 16px; }
+  .sig-divider {
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+  }
+  .sig-divider::before {
+    content: '';
+    display: block;
+    width: 1px;
+    background: var(--gray-mid);
+  }
+  .sig-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--blue);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 14px;
+  }
+  .sig-canvas-wrapper {
+    border: 2px dashed var(--gray-mid);
+    border-radius: 8px;
+    background: var(--gray-bg);
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    cursor: crosshair;
+    margin-bottom: 8px;
+    overflow: hidden;
+  }
+  .sig-canvas-wrapper canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+  }
+  .sig-canvas-placeholder {
+    font-size: 12px;
+    color: #c0c9d8;
+    pointer-events: none;
+    user-select: none;
+    font-style: italic;
+    z-index: 1;
+  }
+  .sig-canvas-clear {
+    font-size: 11px;
+    color: var(--blue);
+    cursor: pointer;
+    text-align: right;
+    padding: 2px 0 8px;
+    text-decoration: underline;
+    background: none;
+    border: none;
+    font-family: var(--font);
+  }
+  .sig-field-row {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 10px;
+  }
+  .sig-input-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .sig-input-lbl {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--gray-text);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+  .sig-input {
+    border: none;
+    border-bottom: 2px solid var(--gray-mid);
+    background: transparent;
+    font-family: var(--font);
+    font-size: 14px;
+    color: var(--body-text);
+    padding: 5px 0;
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+  .sig-input:focus { border-bottom-color: var(--blue); }
+  .sig-input.name-sig { font-size: 16px; font-style: italic; }
+  .sig-input::placeholder { color: #d1d5db; font-style: italic; }
+  .sig-input[readonly] {
+    color: var(--navy);
+    font-weight: 600;
+    border-bottom-style: solid;
+    border-bottom-color: var(--gray-mid);
+    cursor: default;
+  }
+
+  /* ── AGREE CHECKBOX ──────────────────────────────── */
+  .agree-bar {
+    background: var(--navy);
+    border-radius: 8px;
+    padding: 16px 22px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 28px 0;
+  }
+  .agree-bar input[type="checkbox"] {
+    width: 20px; height: 20px;
+    accent-color: var(--blue);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .agree-bar label {
+    font-size: 13px;
+    color: rgba(255,255,255,0.85);
+    cursor: pointer;
+    line-height: 1.5;
+  }
+  .agree-bar label strong { color: #fff; }
+
+  /* ── SUBMIT BUTTON ───────────────────────────────── */
+  .action-bar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 700;
+    padding: 12px 28px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: 0.3px;
+  }
+  .btn-secondary {
+    background: var(--gray-bg);
+    color: var(--navy);
+    border: 2px solid var(--gray-mid);
+  }
+  .btn-secondary:hover { background: var(--gray-mid); }
+  .btn-primary {
+    background: var(--blue);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(10,132,255,0.35);
+  }
+  .btn-primary:hover { background: #0070e0; box-shadow: 0 4px 18px rgba(10,132,255,0.5); }
+  .btn-primary:disabled { background: #94a3b8; box-shadow: none; cursor: not-allowed; }
+
+  /* ── DISCLAIMER FOOTER ───────────────────────────── */
+  .doc-footer {
+    background: var(--gray-bg);
+    border-top: 1px solid var(--gray-mid);
+    border-radius: 0 0 var(--radius) var(--radius);
+    padding: 16px 40px;
+    font-size: 11px;
+    color: var(--gray-text);
+    line-height: 1.6;
+    text-align: center;
+    margin-top: 0;
+  }
+
+  /* ── PRINT STYLES ────────────────────────────────── */
+  @media print {
+    body { background: #fff; font-size: 12px; }
+    .page-wrapper { padding: 0; max-width: 100%; }
+    .doc-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .btn, .action-bar, .sig-canvas-clear { display: none !important; }
+    .sig-canvas-wrapper { border: 1px solid #ccc; background: #fff; }
+    .agree-bar { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .section, .subsection, .tier-card, .callout { break-inside: avoid; }
+    .doc-body { box-shadow: none; }
+    .meta-row, .fee-table thead, .hw-table thead, .schedule-table thead { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+
+  /* ── DELIVERY OPTIONS ───────────────────────────── */
+  .delivery-options { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+  .delivery-opt {
+    display: flex; align-items: flex-start; gap: 12px;
+    background: var(--gray-bg); border: 1.5px solid var(--gray-mid);
+    border-radius: 8px; padding: 12px 16px; cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .delivery-opt:has(input:checked) { border-color: var(--blue); background: var(--blue-pale); }
+  .delivery-opt input[type="radio"] {
+    margin-top: 3px; accent-color: var(--blue);
+    flex-shrink: 0; width: 16px; height: 16px;
+  }
+  .delivery-opt-label { font-weight: 600; font-size: 13px; color: var(--body-text); }
+  .delivery-opt-desc { font-size: 12px; color: var(--gray-text); margin-top: 2px; }
+  .delivery-detail-input {
+    display: none; margin-top: 8px; width: 100%;
+    padding: 8px 10px; border: 1.5px solid var(--gray-mid);
+    border-radius: 6px; font-size: 13px; font-family: var(--font);
+  }
+  .delivery-detail-input:focus { outline: none; border-color: var(--blue); }
+  @media print { .delivery-opt { border: 1px solid #ccc !important; background: #fff !important; } }
+
+  /* ── RESPONSIVE ──────────────────────────────────── */
+  @media (max-width: 700px) {
+    .doc-header { padding: 24px 20px; }
+    .doc-body { padding: 0 20px 28px; }
+    .parties-row { grid-template-columns: 1fr; }
+    .party-divider { display: none; }
+    .meta-row { grid-template-columns: 1fr; }
+    .sig-grid { grid-template-columns: 1fr; }
+    .sig-divider { display: none; }
+    .sig-block { padding: 0 0 24px 0; }
+    .tier-grid { grid-template-columns: 1fr; }
+    .field-row { grid-template-columns: 1fr; }
+    .doc-badge { display: none; }
+  }
+
+  /* ── MODE BANNER ─────────────────────────────────── */
+  .mode-banner {
+    border-radius:8px; padding:16px 20px; margin-bottom:24px;
+    display:flex; align-items:center; gap:14px; font-size:13px;
+  }
+  .mode-banner.mode-installer  { background:#EFF6FF; border:1px solid #BFDBFE; color:#1e40af; }
+  .mode-banner.mode-countersign{ background:#ECFDF5; border:1.5px solid #6EE7B7; color:#065f46; }
+  .mode-banner.mode-executed   { background:#F0FDF4; border:2px solid var(--green); color:#14532d; }
+  .mode-banner-title { font-size:14px; font-weight:700; margin-bottom:3px; }
+  .mode-banner-sub   { font-size:12px; opacity:0.85; }
+  /* ── SIG PENDING ─────────────────────────────────── */
+  .sig-pending {
+    border:2px dashed var(--gray-mid); border-radius:8px; background:var(--gray-bg);
+    height:100px; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; gap:6px; margin-bottom:8px;
+  }
+  .sig-pending-icon { font-size:26px; opacity:0.35; }
+  .sig-pending-text { font-size:12px; color:var(--gray-text); font-style:italic; }
+  /* ── LOCKED INPUT ────────────────────────────────── */
+  .field-input.locked, .sig-input.locked, .meta-input.locked, .delivery-detail-input.locked {
+    color:var(--navy); font-weight:500; border-bottom-color:var(--gray-mid); cursor:default;
+  }
+  @media print { .mode-banner { display:none !important; } }
+</style>
+</head>
+<body>
+
+<div class="page-wrapper">
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- DOCUMENT HEADER                                    -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="doc-header">
+  <div class="header-top">
+    <div class="brand-mark">
+      <div class="brand-icon">Pi</div>
+      <div>
+        <div class="brand-name">Principle &amp; Innovation</div>
+        <div class="brand-sub">to seek truth and be true</div>
+      </div>
+    </div>
+    <div class="doc-badge">
+      <span>Standing Agreement</span>
+      <strong>Independent Contractor</strong>
+    </div>
+  </div>
+  <div class="doc-title">Primary Electrical Installation Agreement</div>
+  <div class="doc-subtitle">Pi Ops Pty Ltd &nbsp;·&nbsp; ABN 85 685 996 114 &nbsp;·&nbsp; 42 Colches St, Casino NSW 2470</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- PARTY DETAILS                                      -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="parties-row">
+  <!-- Pi -->
+  <div class="party-card pi-side">
+    <div class="party-label">Pi Ops Pty Ltd &nbsp;·&nbsp; ABN 85 685 996 114</div>
+    <div class="party-name">trading as Principle and Innovation <span style="font-weight:500;opacity:0.75;">(Pi)</span></div>
+    <div class="party-detail">
+      42 Colches St, Casino NSW 2470<br>
+      <a href="mailto:admin@principleinnovation.tech">admin@principleinnovation.tech</a>
+    </div>
+  </div>
+  <div class="party-divider"></div>
+  <!-- Installer -->
+  <div class="party-card">
+    <div class="party-label">Installer</div>
+    <div class="field-group">
+      <div class="field-row">
+        <label class="field-lbl" for="f-bizname">Business Name</label>
+        <input id="f-bizname" class="field-input" type="text" placeholder="Trading / Company Name" autocomplete="organization">
+      </div>
+      <div class="field-row">
+        <label class="field-lbl" for="f-abn">ABN</label>
+        <input id="f-abn" class="field-input" type="text" placeholder="00 000 000 000" maxlength="14">
+      </div>
+      <div class="field-row">
+        <label class="field-lbl" for="f-responsible">Responsible Individual</label>
+        <input id="f-responsible" class="field-input" type="text" placeholder="Full legal name of responsible person">
+      </div>
+      <div class="field-row">
+        <label class="field-lbl" for="f-contact">Primary Contact</label>
+        <input id="f-contact" class="field-input" type="text" placeholder="Name &amp; role of day-to-day contact">
+      </div>
+      <div class="field-row">
+        <label class="field-lbl" for="f-address">Address</label>
+        <input id="f-address" class="field-input" type="text" placeholder="Business address">
+      </div>
+      <div class="field-row">
+        <label class="field-lbl" for="f-phone">Phone</label>
+        <input id="f-phone" class="field-input" type="tel" placeholder="+61 4xx xxx xxx">
+      </div>
+      <div class="field-row">
+        <label class="field-lbl" for="f-email">Email</label>
+        <input id="f-email" class="field-input" type="email" placeholder="your@email.com">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Meta: Date + Reference -->
+<div class="meta-row">
+  <div class="meta-cell">
+    <span class="meta-lbl">Agreement Date</span>
+    <input id="f-date" class="meta-input" type="text" placeholder="e.g. 11 March 2026">
+  </div>
+  <div class="meta-cell">
+    <span class="meta-lbl">Reference</span>
+    <input id="f-ref" class="meta-input" type="text" value="Pi-PIEA-__________">
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- DOCUMENT BODY                                      -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="doc-body">
+
+  <!-- ── 01 PURPOSE ────────────────────────────────── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">01</div>
+      <div class="section-title-group">
+        <div class="section-tag">Agreement Purpose</div>
+        <div class="section-title">Purpose</div>
+      </div>
+    </div>
+    <p class="body-text">This is a standing agreement between Pi Ops Pty Ltd trading as Principle and Innovation (<strong>Pi</strong>) and the Installer. It governs the ongoing engagement of the Installer as an independent contractor to install Pi energy systems at properties nominated by Pi.</p>
+    <p class="body-text" style="margin-top:10px;">The Installer's role is to deliver quality workmanship within well-defined job details and expectations.</p>
+  </div>
+
+  <!-- ── 02 FEES ────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">02</div>
+      <div class="section-title-group">
+        <div class="section-tag">Schedule of Fees</div>
+        <div class="section-title">Fees for Service</div>
+      </div>
+    </div>
+    <div class="callout">
+      <div class="callout-title">Important</div>
+      All fees are exclusive of GST. Pi reserves the right to update this schedule by written notice. The Installer must not quote or negotiate these fees with homeowners — all customer billing is managed exclusively by Pi.
+    </div>
+
+    <table class="fee-table">
+      <thead>
+        <tr>
+          <th style="width:40%">Core Installations</th>
+          <th>Fee ex GST</th>
+          <th class="note" style="text-align:left">Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Solar PV</td><td>$0.30 / W</td><td class="note">—</td></tr>
+        <tr><td>Battery Energy Storage System with Back-Up Circuit – Installation</td><td>$1,500</td><td class="note">Equipment supplied by Pi; includes essential loads backup circuit</td></tr>
+        <tr><td>Extra Items / Non-Standard Works</td><td>By Quote</td><td class="note">Confirmed in writing before commencement</td></tr>
+      </tbody>
+    </table>
+
+    <table class="fee-table" style="margin-top:16px;">
+      <thead>
+        <tr>
+          <th style="width:40%">Professional Services</th>
+          <th>Fee ex GST</th>
+          <th class="note" style="text-align:left">Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Site Inspection</td><td>$100</td><td class="note">Includes Property Readiness Report</td></tr>
+        <tr><td>System Design</td><td>$100</td><td class="note">SAA-ready engineering design</td></tr>
+        <tr><td>Scheduled Maintenance</td><td>By Quote</td><td class="note">Scope confirmed prior to engagement</td></tr>
+      </tbody>
+    </table>
+
+    <table class="fee-table" style="margin-top:16px;">
+      <thead>
+        <tr>
+          <th style="width:40%">Service Calls – Non-Workmanship</th>
+          <th>Fee ex GST</th>
+          <th class="note" style="text-align:left">Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>System Inspection – first hour</td><td>$250</td><td class="note">Fixed; up to 60 minutes on site</td></tr>
+        <tr><td>Each additional hour</td><td>$125 / hr</td><td class="note">30-minute increments</td></tr>
+      </tbody>
+    </table>
+
+    <div class="subsection" style="margin-top:16px;">
+      <div class="subsection-title">Third-Level Electrical Works</div>
+      <p class="body-text">Switchboard upgrades, meterboard relocations, sub-main cabling, and other property-readiness works identified through a Site Inspection are quoted separately and confirmed via Pi Purchase Order before commencement.</p>
+    </div>
+
+    <table class="fee-table" style="margin-top:8px;">
+      <thead>
+        <tr>
+          <th style="width:55%">DNSP &amp; Regulatory</th>
+          <th>Fee ex GST</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>DNSP Connection Works</td><td>Cost + $50 <span style="font-size:11px;font-weight:400;color:var(--gray-text)">(Pi administration margin)</span></td></tr>
+      </tbody>
+    </table>
+
+    <div class="subsection" style="margin-top:18px;">
+      <div class="subsection-title">Additional &amp; Non-Standard Works</div>
+      <p class="body-text" style="margin-bottom:12px;">The following fees apply to site-specific conditions and non-standard scope items. All additional works must be identified prior to commencement and confirmed in writing via Pi Purchase Order before the Installer attends site.</p>
+      <table class="fee-table">
+        <thead>
+          <tr>
+            <th style="width:42%">Item</th>
+            <th>Installer Fee ex GST</th>
+            <th class="note" style="text-align:left">Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Extra Inverter</td>
+            <td>$250</td>
+            <td class="note">Where system design requires an additional inverter; confirmed in Pi PO before commencement</td>
+          </tr>
+          <tr>
+            <td>Fire Proofing – Supply &amp; Installation (Standard)</td>
+            <td>$200</td>
+            <td class="note">Includes standard fire proofing materials and installation; non-standard scope confirmed in Pi PO</td>
+          </tr>
+          <tr>
+            <td>Terracotta Roof</td>
+            <td>$15 per panel</td>
+            <td class="note">Applied where terracotta tile removal and reinstatement is required</td>
+          </tr>
+          <tr>
+            <td>Panel Tilt Framing</td>
+            <td>$15 per panel</td>
+            <td class="note">Applied where tilt mounting is required to achieve the design pitch or orientation</td>
+          </tr>
+          <tr>
+            <td>Bollard Installation</td>
+            <td>No additional fee</td>
+            <td class="note">Where required as part of a battery installation — bollard supplied by Pi; no additional installer fee applies</td>
+          </tr>
+          <tr>
+            <td>Platform Connection: Wi-Fi &amp; App Set-Up</td>
+            <td>Included</td>
+            <td class="note">Included in solar and/or battery installation fee where homeowner is present at commissioning. If the homeowner is absent, app set-up may be completed at a subsequent visit — an additional cost applies to the homeowner and an additional attendance fee applies to the installer (rate TBA; confirmed in writing)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── 03 PI OBLIGATIONS ──────────────────────────── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">03</div>
+      <div class="section-title-group">
+        <div class="section-tag">What Pi Provides</div>
+        <div class="section-title">Pi's Obligations</div>
+      </div>
+    </div>
+    <p class="body-text">The following obligations apply to Pi unless the Agreement and the relevant Purchase Order specify that responsibility rests with the Installer:</p>
+    <ul class="doc-list" style="margin-top:10px;">
+      <li>CEC-compliant system design — Installer installs strictly to Pi's SAA-Designer specification</li>
+      <li>Major hardware — see Hardware Allocation below</li>
+      <li>Manufacturer first-install assistance where required</li>
+      <li>Dedicated engineering, technical, and compliance support</li>
+      <li>Clear Purchase Order confirming scope and rate before attendance</li>
+      <li>Certification coordination with the appointed Manufacturer</li>
+      <li>STC registration and lodgement through Pi as CER Registered Agent</li>
+      <li>7-day EFT payment — AMEX preferred; Installer to provide payment link</li>
+      <li>All billing and homeowner communication managed exclusively by Pi</li>
+    </ul>
+    <div class="callout" style="margin-top:14px;">
+      <div class="callout-title">Partners &amp; Third Parties</div>
+      Some of the obligations listed above may be fulfilled by Pi's partners, including manufacturers, engineers, accredited third-party certifiers, or other service providers. Where this applies, those services may be subject to the relevant partner's own terms and conditions. Pi will make applicable partner terms available to the Installer on request.
+    </div>
+
+    <div class="subsection" style="margin-top:18px;">
+      <div class="subsection-title">Hardware Allocation</div>
+      <p class="body-text" style="margin-bottom:12px;">The table below defines the standard supply split. Items marked as negotiable may be varied by mutual written agreement confirmed in the Purchase Order.</p>
+      <table class="hw-table">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Pi Supplies</th>
+            <th>Installer Supplies</th>
+            <th>Negotiable</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Solar PV Panels</td><td><span class="check">✓</span></td><td></td><td></td></tr>
+          <tr><td>Mounting / Racking System</td><td><span class="check">✓</span></td><td></td><td></td></tr>
+          <tr><td>Inverter(s)</td><td><span class="check">✓</span></td><td></td><td></td></tr>
+          <tr><td>Battery Energy Storage System</td><td><span class="check">✓</span></td><td></td><td></td></tr>
+          <tr><td>Bollards / Physical Protection</td><td><span class="check">✓</span></td><td></td><td></td></tr>
+          <tr><td>Label Kits</td><td><span class="check">✓</span></td><td></td><td></td></tr>
+          <tr><td>Network &amp; Monitoring Systems</td><td><span class="check">✓</span></td><td></td><td></td></tr>
+          <tr><td>Smoke Alarms (where required)</td><td><span class="check">✓</span></td><td></td><td><span class="neg">Neg.</span></td></tr>
+          <tr><td>Conduit, Cable &amp; Cable Management</td><td></td><td><span class="check">✓</span></td><td><span class="neg">Neg.</span></td></tr>
+          <tr><td>Switchboard Materials &amp; Consumables</td><td></td><td><span class="check">✓</span></td><td><span class="neg">Neg.</span></td></tr>
+          <tr><td>Fasteners, Anchors &amp; Fixings</td><td></td><td><span class="check">✓</span></td><td></td></tr>
+          <tr><td>Sealants &amp; Waterproofing Materials</td><td></td><td><span class="check">✓</span></td><td></td></tr>
+          <tr><td>Labour, Tools &amp; Equipment</td><td></td><td><span class="check">✓</span></td><td></td></tr>
+          <tr><td>Other Balance of Job Items</td><td></td><td><span class="check">✓</span></td><td><span class="neg">Neg.</span></td></tr>
+        </tbody>
+      </table>
+      <div class="callout warn" style="margin-top:12px;">
+        <div class="callout-title">Important</div>
+        Any variation to the standard supply split must be agreed in writing and confirmed in the relevant Purchase Order before commencement. Verbal arrangements are not binding.
+      </div>
+    </div>
+
+    <div class="subsection" style="margin-top:18px;">
+      <div class="subsection-title">Hardware &amp; System Delivery</div>
+      <p class="body-text" style="margin-bottom:12px;">Pi-supplied hardware will be delivered or made available in accordance with the option elected by the Installer below. All standard delivery options are at no cost to the Installer. The elected method and any relevant details will be confirmed in the relevant Purchase Order.</p>
+      <div class="delivery-options">
+        <label class="delivery-opt">
+          <input type="radio" name="delivery-opt" value="delivery" onchange="toggleDeliveryDetails()">
+          <div style="width:100%">
+            <div class="delivery-opt-label">Delivery to Installer's Address <span style="font-weight:400;color:var(--green);font-size:11px;">— No cost to Installer</span></div>
+            <div class="delivery-opt-desc">Hardware delivered to the Installer's registered business or nominated address at no cost. Confirm or update delivery address and any access or timing requirements below.</div>
+            <input type="text" id="delivery-detail-delivery" class="delivery-detail-input" placeholder="Delivery address and any access / timing notes…">
+          </div>
+        </label>
+        <label class="delivery-opt">
+          <input type="radio" name="delivery-opt" value="collection" onchange="toggleDeliveryDetails()">
+          <div style="width:100%">
+            <div class="delivery-opt-label">Supplier / Warehouse Collection <span style="font-weight:400;color:var(--green);font-size:11px;">— No cost to Installer</span></div>
+            <div class="delivery-opt-desc">Installer collects hardware directly from Pi's nominated supplier or warehouse at no cost. Note preferred collection date, time, or any relevant instructions below.</div>
+            <input type="text" id="delivery-detail-collection" class="delivery-detail-input" placeholder="Preferred collection date / time and any relevant notes…">
+          </div>
+        </label>
+        <label class="delivery-opt">
+          <input type="radio" name="delivery-opt" value="other" onchange="toggleDeliveryDetails()">
+          <div style="width:100%">
+            <div class="delivery-opt-label">Other – As Agreed Between the Parties</div>
+            <div class="delivery-opt-desc">Any alternative arrangement must be agreed in writing by both parties and confirmed in the Purchase Order before commencement.</div>
+            <input type="text" id="delivery-detail-other" class="delivery-detail-input" placeholder="Describe the agreed delivery arrangement…">
+          </div>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 04 INSTALLATION STANDARDS ─────────────────── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">04</div>
+      <div class="section-title-group">
+        <div class="section-tag">Scope Requirements</div>
+        <div class="section-title">Installation Standards</div>
+      </div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Essential Loads Backup Circuit</div>
+      <p class="body-text">Every Pi battery installation must include a default backup circuit covering refrigeration, lighting (minimum one circuit per level), and internet. Confirmed as operational at commissioning sign-off. Variations require Pi's written approval.</p>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Platform Connection</div>
+      <p class="body-text">Each system must be commissioned to connect to the Pi/Hardware monitoring platform. Connection confirmed in the Pi Installation Completion Documentation.</p>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Safety Certificate</div>
+      <p class="body-text">A Certificate of Compliance – Electrical Work (CCEW) or jurisdiction equivalent must be submitted to Pi systems and lodged with the DNSP as required.</p>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">STC Documentation</div>
+      <p class="body-text">Pi will supply a digital STC job form for completion. All STCs must be assigned exclusively to Pi Ops Pty Ltd.</p>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Pi Installation Completion Documentation</div>
+      <div class="callout warn" style="margin-bottom:12px;">
+        <strong>No payment is made without complete documentation submitted through Pi systems.</strong>
+      </div>
+      <ul class="doc-list">
+        <li>Pre-install site and full roof condition photos (before any penetrations)</li>
+        <li>During-install compliance photos — terminations, fixings, penetrations before and after sealing</li>
+        <li>Switchboard photos (internal and external), labelling and safety warnings</li>
+        <li>Array overview, panel clamp photos, serial numbers, inverter/battery labels</li>
+        <li>Commissioning photos and data confirming platform connection</li>
+        <li>Completed Pi checklists, safety certificate, STC Assignment Form</li>
+        <li>Voltage rise calculation, shade/site assessment (where applicable)</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ── 05 INSTALLER OBLIGATIONS ──────────────────── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">05</div>
+      <div class="section-title-group">
+        <div class="section-tag">Compliance, Licences &amp; Quality</div>
+        <div class="section-title">Installer Obligations</div>
+      </div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Licences &amp; Accreditations</div>
+      <p class="body-text" style="margin-bottom:10px;">The Installer and all personnel must hold and maintain:</p>
+      <ul class="doc-list">
+        <li>SAA Solar Installer Accreditation (GCPV) and Battery Storage Endorsement (GCBS)</li>
+        <li>State Electrical Contractor Licence and individual Electrician Licence for each worker</li>
+        <li>Applicable state registrations (NSW Fair Trading, QLD ESO, ESV, OTR)</li>
+        <li>Working at Heights Certification, Fall Arrest Safety Training, White Card</li>
+        <li>Any DNSP or regulator-required endorsements</li>
+      </ul>
+      <div class="callout warn" style="margin-top:12px;">
+        Any lapse must be notified to Pi immediately. Failure results in immediate suspension from work allocation.
+      </div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Insurance</div>
+      <p class="body-text" style="margin-bottom:10px;">Maintained at the Installer's cost for the full term:</p>
+      <ul class="doc-list">
+        <li>Public Liability ≥ <strong>$10,000,000</strong></li>
+        <li>Workers Compensation as required by applicable state legislation</li>
+        <li>Professional Indemnity and tools/equipment insurance where applicable</li>
+      </ul>
+      <p class="body-text" style="margin-top:10px;">Insurance must be active from goods collection through job completion. Certificates of Currency on file with Pi before any work is allocated.</p>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Quality Standards</div>
+      <p class="body-text">All work must comply with AS/NZS 5033, AS/NZS 5139, AS/NZS 3000, the Pi Installer Compliance Pack, Manufacturer protocols, DNSP technical standards, and SAA guidelines. Pi's system design must be followed without modification — any deviation requires Pi's written approval. Unauthorised changes attract no payment and rectification at the Installer's cost.</p>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">10-Year Workmanship Warranty</div>
+      <p class="body-text">The Installer provides Pi a 10-Year Workmanship Warranty on all work under this Agreement. Defects must be remediated within:</p>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px;">
+        <div style="background:#FEF3C7;border-radius:8px;padding:12px 14px;text-align:center;">
+          <div style="font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Critical Safety</div>
+          <div style="font-size:20px;font-weight:800;color:#b45309;">24 hrs</div>
+        </div>
+        <div style="background:#FEE2E2;border-radius:8px;padding:12px 14px;text-align:center;">
+          <div style="font-size:11px;font-weight:700;color:#991b1b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Major Defect</div>
+          <div style="font-size:20px;font-weight:800;color:#dc2626;">3 days</div>
+        </div>
+        <div style="background:#EFF6FF;border-radius:8px;padding:12px 14px;text-align:center;">
+          <div style="font-size:11px;font-weight:700;color:#1e40af;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Minor Defect</div>
+          <div style="font-size:20px;font-weight:800;color:#2563eb;">7 days</div>
+        </div>
+      </div>
+      <p class="body-text" style="margin-top:12px;">Rectification is at the Installer's cost. Manufacturing defects, third-party damage, and normal wear are excluded.</p>
+    </div>
+  </div>
+
+  <!-- ── 06 PAYMENT ────────────────────────────────── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">06</div>
+      <div class="section-title-group">
+        <div class="section-tag">Installer Payment Terms</div>
+        <div class="section-title">Payment</div>
+      </div>
+    </div>
+
+    <div class="callout success">
+      <div class="callout-title">Payment Timing</div>
+      Pi pays within <strong>7 days</strong> of receiving a correctly rendered invoice and confirming complete Pi Installation Completion Documentation. Payment is by EFT; AMEX preferred — Installer to provide payment link.
+    </div>
+
+    <div class="subsection" style="margin-top:14px;">
+      <div class="subsection-title">Purchase Orders</div>
+      <p class="body-text">Pi issues a Purchase Order for every job before the Installer attends site, confirming scope and rate. No work is to be commenced without a valid PO. Pi will not pay for works performed without one.</p>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Payment Conditions</div>
+      <p class="body-text" style="margin-bottom:10px;">Payment requires all of the following:</p>
+      <ul class="doc-list">
+        <li>Complete documentation with no outstanding items</li>
+        <li>No unresolved compliance breaches</li>
+        <li>Current licences, accreditations, and insurance on Pi's file</li>
+        <li>No outstanding rectification obligations</li>
+      </ul>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Deductions</div>
+      <p class="body-text">Pi may deduct Audit Rectification Costs from amounts owed or withhold outstanding payments until rectification is resolved. Pi will provide written notice of any deduction.</p>
+    </div>
+  </div>
+
+  <!-- ── 07 GENERAL TERMS ───────────────────────────── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">07</div>
+      <div class="section-title-group">
+        <div class="section-tag">Terms &amp; Conditions</div>
+        <div class="section-title">General Terms</div>
+      </div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Independent Contractor</div>
+      <p class="body-text">The Installer is an independent contractor. Nothing creates employment, agency, partnership, or joint venture. The Installer has no authority to bind Pi.</p>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Customer Ownership, Non-Solicitation &amp; Non-Circumvention</div>
+      <p class="body-text">All customers engaged through or introduced by Pi belong exclusively to Pi. The Installer must not, directly or indirectly, solicit, accept private work from, or contact any Pi customer in connection with energy systems, electrical works, or related services — except as expressly directed by Pi — during the term of this Agreement and for <strong>36 months following its termination</strong>.</p>
+      <p class="body-text" style="margin-top:10px;"><strong>Pre-Existing Relationships.</strong> Where the Installer holds a documented pre-existing relationship with a customer established prior to that customer becoming engaged with Pi, private works for that customer outside the Pi engagement are not prohibited, subject to the following conditions:</p>
+      <ul class="doc-list" style="margin-top:8px;">
+        <li><strong>(a)</strong> The pre-existing relationship must be disclosed to Pi in writing before any such works are undertaken, identifying the customer and nature of the prior engagement;</li>
+        <li><strong>(b)</strong> No work performed by the Installer — whether under the pre-existing relationship or otherwise — shall interfere with, modify, alter, compromise, or adversely affect any Pi energy system, equipment, installation, monitoring platform, or service agreement, unless Pi provides prior written consent; and</li>
+        <li><strong>(c)</strong> The Installer must not, under any circumstances, circumvent Pi's contractual arrangements, financial interests, customer relationship, or service obligations with that customer in connection with any Pi-related system, equipment, or service. This includes (without limitation) directly or indirectly accepting work that would displace, replicate, or interfere with services Pi has agreed to provide or is providing to that customer.</li>
+      </ul>
+      <p class="body-text" style="margin-top:10px;">Any variation to these obligations must be agreed in writing and signed by both parties before the relevant works commence. Oral arrangements or claims of pre-authorisation are of no effect.</p>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Confidentiality &amp; IP</div>
+      <p class="body-text">All Pi designs, data, pricing, documentation, processes, IP, and customer information are confidential and remain Pi's exclusive property. The Installer gains no rights outside this Agreement. This obligation survives termination.</p>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Governing Law</div>
+      <p class="body-text">This Agreement is governed by the laws of New South Wales, Australia.</p>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Variation &amp; Whole Agreement</div>
+      <p class="body-text">Variations require written sign-off by both parties. This Agreement, together with the Pi Installer Code of Conduct, Compliance Pack, Site Audit Framework, Certified Partnership Program, and Installer Fee Schedule, constitutes the entire agreement.</p>
+    </div>
+  </div>
+
+  <!-- ── 08 PARTNERSHIP / CPP ───────────────────────── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">08</div>
+      <div class="section-title-group">
+        <div class="section-tag">Pi – Certified Partnership Program</div>
+        <div class="section-title">Partnership</div>
+      </div>
+    </div>
+    <p class="body-text">All Installers must hold a current CPP accreditation level before active work is assigned. The program advances across three tiers based on performance, compliance record, and capability.</p>
+
+    <div class="tier-grid">
+      <!-- Level 1 -->
+      <div class="tier-card tier-1">
+        <div class="tier-head">
+          <div class="tier-level">Level 1</div>
+          <div class="tier-name">Pi Semi-Certified Installer</div>
+        </div>
+        <div class="tier-body">
+          <div class="tier-sub">To Qualify</div>
+          <div class="tier-item"><span class="tier-item-icon">›</span><span>Complete Pi onboarding training</span></div>
+          <div class="tier-item"><span class="tier-item-icon">›</span><span>Submit all licences, accreditations &amp; insurances to Pi</span></div>
+          <div class="tier-item"><span class="tier-item-icon">›</span><span>Sign Installer Agreement and accept all compliance documents</span></div>
+          <div class="tier-sub">Privileges</div>
+          <div class="tier-item"><span class="tier-item-icon">›</span><span>Work allocation begins immediately upon approval</span></div>
+          <div class="tier-item"><span class="tier-item-icon">›</span><span>Standard scopes — Battery Backup, base Solar PV</span></div>
+          <div class="tier-item"><span class="tier-item-icon">›</span><span>CEC-compliant design, hardware delivery &amp; Manufacturer support</span></div>
+        </div>
+      </div>
+      <!-- Level 2 -->
+      <div class="tier-card tier-2">
+        <div class="tier-head">
+          <div class="tier-level">Level 2</div>
+          <div class="tier-name">Pi Fully Certified Installer</div>
+        </div>
+        <div class="tier-body">
+          <div class="tier-sub">To Advance</div>
+          <div class="tier-item"><span class="tier-item-icon">›</span><span>25 installations in a 3-month period</span></div>
+          <div class="tier-item"><span class="tier-item-icon">›</span><span>All Level 1 obligations in good standing</span></div>
+          <div class="tier-item"><span class="tier-item-icon">›</span><span>Zero compliance breaches across all Pi jobs</span></div>
+          <div class="tier-sub">Additional Benefits</div>
+          <div class="tier-item"><span class="tier-item-icon">›</span><span>Priority job allocation in Pi's scheduling pipeline</span></div>
+          <div class="tier-item"><span class="tier-item-icon">›</span><span>Access to higher-value and more complex scopes</span></div>
+          <div class="tier-item"><span class="tier-item-icon">›</span><span>Preference in rollout regions as Pi scales nationally</span></div>
+        </div>
+      </div>
+      <!-- Level 3 -->
+      <div class="tier-card tier-3">
+        <div class="tier-head">
+          <div class="tier-level">Level 3</div>
+          <div class="tier-name">Pi Fully Certified Project Partner</div>
+        </div>
+        <div class="tier-body">
+          <div class="tier-sub">To Advance</div>
+          <div class="tier-item"><span class="tier-item-icon">›</span><span>Level 2 in good standing</span></div>
+          <div class="tier-item"><span class="tier-item-icon">›</span><span>Demonstrated ability to manage multi-site projects &amp; sub-contractors</span></div>
+          <div class="tier-item"><span class="tier-item-icon">›</span><span>No compliance issues in prior quarter</span></div>
+          <div class="tier-sub">Additional Benefits</div>
+          <div class="tier-item"><span class="tier-item-icon">›</span><span>Preference for multi-property and complex project allocations</span></div>
+          <div class="tier-item"><span class="tier-item-icon">›</span><span>Eligibility for premium project rates</span></div>
+          <div class="tier-item"><span class="tier-item-icon">›</span><span>Same-business-day response from Pi's senior engineering team</span></div>
+          <div class="tier-item"><span class="tier-item-icon">›</span><span>Named listing on Pi's Project Partner register</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SCHEDULE A ─────────────────────────────────── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num" style="background:var(--navy);">A</div>
+      <div class="section-title-group">
+        <div class="section-tag">Incorporated by Reference</div>
+        <div class="section-title">Schedule A — Related Pi Documents</div>
+      </div>
+    </div>
+    <p class="body-text" style="margin-bottom:16px;">All documents below are incorporated by reference where applicable. Current versions are maintained by Pi Ops Pty Ltd and available via the Pi Partner Portal or on written request.</p>
+    <table class="schedule-table">
+      <thead>
+        <tr>
+          <th>Document</th>
+          <th>Scope</th>
+          <th>Applies To</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="background:#EFF6FF;font-weight:700;color:var(--blue);">Pi – Primary Electrical Installation Agreement <em>(this document)</em></td>
+          <td>Standing installer engagement; fees, standards, compliance, certification, payment</td>
+          <td><span class="badge">Installer Partners</span></td>
+        </tr>
+        <tr><td>Pi Installer Agreement</td><td>Master contract; scope, licences, audit rights, rectification, non-solicitation, indemnity, termination</td><td><span class="badge">Installer Partners</span></td></tr>
+        <tr><td>Pi Installer Partner Information Pack</td><td>Pi model overview, roles, certification pathway, work types, support structure</td><td><span class="badge">Installer Partners</span></td></tr>
+        <tr><td>Pi – Certified Partnership Program Agreement</td><td>CPP Levels 1–3; advancement criteria, priority assistance entitlements</td><td><span class="badge">Installer Partners</span></td></tr>
+        <tr><td>Pi – Installer Fee Schedule</td><td>Confirmed scope rates; issued separately, incorporated automatically</td><td><span class="badge">Installer Partners</span></td></tr>
+        <tr><td>Pi Installer Code of Conduct</td><td>Conduct obligations, customer rules, confidentiality, safety standards</td><td><span class="badge">Installer Partners</span></td></tr>
+        <tr><td>Pi Installer Compliance Pack</td><td>Technical standards, AS/NZS 5033/5139, Manufacturer protocols, commissioning checklist</td><td><span class="badge">Installer Partners</span></td></tr>
+        <tr><td>Pi Site Audit Framework</td><td>Audit rights; in-progress, post-install, random; rectification timeframes</td><td><span class="badge">Installer Partners</span></td></tr>
+        <tr><td>Pi Energy Services Agreement</td><td>10-year homeowner energy supply; $0.30/kWh, VPP ownership, Essential Loads Circuit</td><td><span class="badge" style="background:#ECFDF5;color:#065f46;">Customer</span></td></tr>
+        <tr><td>Pi – Site Inspection &amp; Property Readiness Report</td><td>Pre-install assessment; basis for third-level works quote</td><td><span class="badge" style="background:#ECFDF5;color:#065f46;">Customer</span></td></tr>
+        <tr><td>Pi – System Design &amp; Engineering Specification</td><td>SAA-compliant design, single-line diagram, AS/NZS documentation</td><td><span class="badge">Installer Partners</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- EXECUTION / SIGNATURES                         -->
+  <!-- ═══════════════════════════════════════════════ -->
+
+  <div id="mode-banner" class="mode-banner" style="display:none;"></div>
+
+  <div class="execution-section">
+    <div class="execution-title">Execution — Signatures</div>
+    <p class="execution-intro">By signing below, each party confirms they have read, understood, and agree to be bound by this Agreement in its entirety.</p>
+
+    <div class="sig-grid">
+
+      <!-- Pi side -->
+      <div class="sig-block">
+        <div class="sig-label">For and on behalf of Pi Ops Pty Ltd</div>
+        <!-- Pending placeholder (installer mode only) -->
+        <div id="pi-sig-pending" class="sig-pending">
+          <div class="sig-pending-icon">⏳</div>
+          <div class="sig-pending-text">Awaiting Pi countersignature</div>
+        </div>
+        <!-- Pi signature form (countersign + executed modes) -->
+        <div id="pi-sig-form" style="display:none;">
+          <div class="sig-canvas-wrapper" id="canvas-pi-wrapper">
+            <span class="sig-canvas-placeholder" id="canvas-pi-placeholder">Sign here</span>
+            <canvas id="canvas-pi"></canvas>
+          </div>
+          <button class="sig-canvas-clear" id="pi-clear-btn" onclick="clearCanvas('pi')">Clear</button>
+          <div class="sig-field-row">
+            <div class="sig-input-wrap">
+              <label class="sig-input-lbl" for="pi-name">Full Name</label>
+              <input id="pi-name" class="sig-input name-sig" type="text" placeholder="Full name">
+            </div>
+            <div class="sig-input-wrap">
+              <label class="sig-input-lbl" for="pi-pos">Position</label>
+              <input id="pi-pos" class="sig-input" type="text" value="Director" readonly>
+            </div>
+            <div class="sig-input-wrap">
+              <label class="sig-input-lbl" for="pi-date">Date</label>
+              <input id="pi-date" class="sig-input" type="text" placeholder="e.g. 14 March 2026">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sig-divider"></div>
+
+      <!-- Installer side -->
+      <div class="sig-block right-sig">
+        <div class="sig-label">Installer</div>
+        <div class="sig-canvas-wrapper" id="canvas-inst-wrapper">
+          <span class="sig-canvas-placeholder" id="canvas-inst-placeholder">Sign here</span>
+          <canvas id="canvas-inst"></canvas>
+        </div>
+        <button class="sig-canvas-clear" id="inst-clear-btn" onclick="clearCanvas('inst')">Clear</button>
+        <div class="sig-field-row">
+          <div class="sig-input-wrap">
+            <label class="sig-input-lbl" for="inst-name">Full Name</label>
+            <input id="inst-name" class="sig-input name-sig" type="text" placeholder="Full name">
+          </div>
+          <div class="sig-input-wrap">
+            <label class="sig-input-lbl" for="inst-pos">Position / Title</label>
+            <input id="inst-pos" class="sig-input" type="text" placeholder="Director / Sole Trader">
+          </div>
+          <div class="sig-input-wrap">
+            <label class="sig-input-lbl" for="inst-date">Date</label>
+            <input id="inst-date" class="sig-input" type="text" placeholder="e.g. 14 March 2026">
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end sig-grid -->
+
+    <!-- Checkbox -->
+    <div class="agree-bar" id="agree-bar">
+      <input type="checkbox" id="agree-check" onchange="checkReady()">
+      <label for="agree-check">I confirm I have read and understood this Agreement in its entirety and agree to be bound by all its terms and conditions. I acknowledge that this constitutes a legally binding agreement.</label>
+    </div>
+
+    <!-- Buttons -->
+    <div class="action-bar" id="action-bar">
+      <button class="btn btn-secondary" onclick="window.print()">
+        <span>🖨</span> Print / Save PDF
+      </button>
+      <button class="btn btn-primary" id="submit-btn" disabled>
+        <span>→</span> <span id="submit-btn-text">Submit to Pi for Countersigning</span>
+      </button>
+    </div>
+
+  </div>
+
+</div><!-- end doc-body -->
+
+<!-- FOOTER DISCLAIMER -->
+<div class="doc-footer">
+  This document is a template prepared by Pi Ops Pty Ltd (ABN 85 685 996 114).
+  It does not constitute legal advice. Pi recommends both parties obtain independent legal advice prior to execution.
+  &copy; 2026 Principle and Innovation.
+</div>
+
+</div><!-- end page-wrapper -->
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- DIGITAL SIGNATURE JAVASCRIPT                       -->
+<!-- ═══════════════════════════════════════════════════ -->
+<script>
+/* __AGREEMENT_DATA_START__ */ window.__AGREEMENT_DATA__ = null; /* __AGREEMENT_DATA_END__ */
+
+// ─────────────────────────────────────────────────────────────
+//  TWO-PARTY DIGITAL SIGNING WORKFLOW
+//  Modes: 'installer' | 'countersign' | 'executed'
+// ─────────────────────────────────────────────────────────────
+const PI_EMAIL   = 'admin@principleinnovation.tech';
+let   WORKFLOW_MODE = 'installer';
+
+const drawPaths = { pi: [], inst: [] };
+const canvases  = {};
+const contexts  = {};
+
+// ── INIT ──────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function () {
+  initCanvas('pi');
+  initCanvas('inst');
+  setTodayPlaceholders();
+  // Read pre-fill data from URL hash — e.g. link sent by Pi: /agreement#d=BASE64
+  if (!window.__AGREEMENT_DATA__ && window.location.hash.startsWith('#d=')) {
+    try {
+      var b64  = window.location.hash.slice(3);
+      var json = decodeURIComponent(escape(atob(b64)));
+      window.__AGREEMENT_DATA__ = JSON.parse(json);
+    } catch(e) { /* ignore bad hash */ }
+  }
+  if (window.__AGREEMENT_DATA__) {
+    WORKFLOW_MODE = window.__AGREEMENT_DATA__.mode || 'installer';
+  }
+  // Delay slightly so layout is settled before replaying signatures
+  setTimeout(applyMode, 80);
+});
+
+// ── APPLY MODE ────────────────────────────────────────────────
+function applyMode() {
+  const d = window.__AGREEMENT_DATA__;
+
+  if (WORKFLOW_MODE === 'installer') {
+    showBanner('installer',
+      '📋  Installer Review &amp; Sign',
+      'Complete your details below, draw your signature, tick the checkbox, then submit to Pi for countersigning.');
+    // Pre-fill installer fields from URL hash data (if opened via Pi-sent link)
+    if (d && d.mode === 'installer') {
+      populateInstallerFields(d);
+    }
+    // Pi side: show pending, hide form
+    document.getElementById('pi-sig-pending').style.display = 'flex';
+    document.getElementById('pi-sig-form').style.display    = 'none';
+    // Installer canvas: interactive
+    const ic = canvases['inst'];
+    if (ic) ic.dataset.interactive = 'true';
+    // Submit button
+    const btn = document.getElementById('submit-btn');
+    btn.onclick = submitToPI;
+    document.getElementById('submit-btn-text').textContent = 'Submit to Pi for Countersigning →';
+    checkReady();
+
+  } else if (WORKFLOW_MODE === 'countersign' && d) {
+    showBanner('countersign',
+      '&#x270D;&#xFE0F;  Pi Countersignature Required',
+      'The installer has reviewed and signed. Please review the agreement and add your countersignature below.');
+    // Populate + lock installer fields
+    populateInstallerFields(d);
+    lockInstallerFields();
+    // Replay installer signature
+    requestAnimationFrame(() => replaySignature('inst', d.instPaths || []));
+    // Pi side: show form, hide pending
+    document.getElementById('pi-sig-pending').style.display = 'none';
+    document.getElementById('pi-sig-form').style.display    = 'block';
+    // Pi canvas: interactive
+    const pc = canvases['pi'];
+    if (pc) pc.dataset.interactive = 'true';
+    // Submit
+    const btn = document.getElementById('submit-btn');
+    btn.onclick = executeAgreement;
+    document.getElementById('submit-btn-text').textContent = 'Execute Agreement &amp; Send to Both Parties →';
+    checkReady();
+
+  } else if (WORKFLOW_MODE === 'executed' && d) {
+    showBanner('executed',
+      '&#x2705;  Agreement Fully Executed',
+      'Executed ' + (d.piDate || '') + '. Both parties have signed. This is the official executed copy.');
+    // Populate + lock ALL fields
+    populateInstallerFields(d);
+    lockInstallerFields();
+    requestAnimationFrame(() => replaySignature('inst', d.instPaths || []));
+    // Pi side: show form, lock it
+    document.getElementById('pi-sig-pending').style.display = 'none';
+    document.getElementById('pi-sig-form').style.display    = 'block';
+    populatePiFields(d);
+    lockPiFields();
+    requestAnimationFrame(() => replaySignature('pi', d.piPaths || []));
+    // Pre-tick + disable checkbox
+    const cb = document.getElementById('agree-check');
+    if (cb) { cb.checked = true; cb.disabled = true; }
+    // Hide submit button
+    document.getElementById('submit-btn').style.display = 'none';
+  }
+}
+
+// ── BANNER ────────────────────────────────────────────────────
+function showBanner(type, title, sub) {
+  const el = document.getElementById('mode-banner');
+  el.style.display = 'flex';
+  el.className = 'mode-banner mode-' + type;
+  el.innerHTML = '<div><div class="mode-banner-title">' + title +
+                 '</div><div class="mode-banner-sub">' + sub + '</div></div>';
+}
+
+// ── CANVAS INIT ───────────────────────────────────────────────
+function initCanvas(id) {
+  const wrapper = document.getElementById('canvas-' + id + '-wrapper');
+  const canvas  = document.getElementById('canvas-' + id);
+  const ph      = document.getElementById('canvas-' + id + '-placeholder');
+  if (!wrapper || !canvas) return;
+
+  let hasSigned = false;
+  let drawing   = false;
+
+  function resize() {
+    const rect = wrapper.getBoundingClientRect();
+    const dpr  = window.devicePixelRatio || 1;
+    canvas.width  = rect.width  * dpr;
+    canvas.height = rect.height * dpr;
+    canvas.style.width  = rect.width  + 'px';
+    canvas.style.height = rect.height + 'px';
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    ctx.strokeStyle = '#0A84FF';
+    ctx.lineWidth   = 2.2;
+    ctx.lineCap     = 'round';
+    ctx.lineJoin    = 'round';
+    canvases[id] = canvas;
+    contexts[id] = ctx;
+    if (drawPaths[id] && drawPaths[id].length > 0) {
+      replaySignature(id, drawPaths[id]);
+    }
+  }
+
+  resize();
+  window.addEventListener('resize', resize);
+
+  function norm(e) {
+    const rect = canvas.getBoundingClientRect();
+    const src  = e.touches ? e.touches[0] : e;
+    return { x: (src.clientX - rect.left) / rect.width,
+             y: (src.clientY - rect.top)  / rect.height };
+  }
+
+  let stroke = null;
+
+  function onStart(e) {
+    if (canvas.dataset.interactive !== 'true') return;
+    e.preventDefault();
+    drawing = true;
+    stroke  = [norm(e)];
+  }
+  function onMove(e) {
+    if (!drawing || canvas.dataset.interactive !== 'true') return;
+    e.preventDefault();
+    const pt = norm(e);
+    stroke.push(pt);
+    const prev = stroke[stroke.length - 2];
+    const ctx  = contexts[id];
+    const rect = canvas.getBoundingClientRect();
+    ctx.beginPath();
+    ctx.moveTo(prev.x * rect.width, prev.y * rect.height);
+    ctx.lineTo(pt.x   * rect.width, pt.y   * rect.height);
+    ctx.stroke();
+    if (!hasSigned) {
+      hasSigned = true;
+      if (ph) ph.style.display = 'none';
+      wrapper.style.borderStyle = 'solid';
+      wrapper.style.borderColor = 'var(--blue)';
+      wrapper.style.background  = '#fff';
+    }
+    checkReady();
+  }
+  function onEnd() {
+    if (!drawing) return;
+    drawing = false;
+    if (stroke && stroke.length > 1) drawPaths[id].push(stroke);
+    stroke = null;
+  }
+
+  canvas.addEventListener('mousedown',  onStart);
+  canvas.addEventListener('mousemove',  onMove);
+  canvas.addEventListener('mouseup',    onEnd);
+  canvas.addEventListener('mouseleave', onEnd);
+  canvas.addEventListener('touchstart', onStart, { passive: false });
+  canvas.addEventListener('touchmove',  onMove,  { passive: false });
+  canvas.addEventListener('touchend',   onEnd);
+
+  canvases[id] = canvas;
+  contexts[id] = canvas.getContext('2d');
+  canvases[id].hasSigned = () => hasSigned;
+  canvases[id]._reset = () => {
+    hasSigned = false;
+    drawPaths[id] = [];
+    if (ph) ph.style.display = '';
+    wrapper.style.borderStyle = 'dashed';
+    wrapper.style.borderColor = 'var(--gray-mid)';
+    wrapper.style.background  = 'var(--gray-bg)';
+  };
+}
+
+// ── REPLAY SIGNATURE ─────────────────────────────────────────
+function replaySignature(id, paths) {
+  const canvas  = canvases[id];
+  const ctx     = contexts[id];
+  if (!canvas || !ctx || !paths || paths.length === 0) return;
+  const wrapper = document.getElementById('canvas-' + id + '-wrapper');
+  const ph      = document.getElementById('canvas-' + id + '-placeholder');
+  const w = canvas.getBoundingClientRect().width  || canvas.offsetWidth  || 300;
+  const h = canvas.getBoundingClientRect().height || canvas.offsetHeight || 100;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = '#0A84FF';
+  ctx.lineWidth   = 2.2;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  paths.forEach(function(stroke) {
+    if (!stroke || stroke.length < 2) return;
+    ctx.beginPath();
+    ctx.moveTo(stroke[0].x * w, stroke[0].y * h);
+    for (var i = 1; i < stroke.length; i++) {
+      ctx.lineTo(stroke[i].x * w, stroke[i].y * h);
+    }
+    ctx.stroke();
+  });
+  drawPaths[id] = paths;
+  if (ph) ph.style.display = 'none';
+  if (wrapper) {
+    wrapper.style.borderStyle = 'solid';
+    wrapper.style.borderColor = 'var(--blue)';
+    wrapper.style.background  = '#fff';
+  }
+}
+
+function clearCanvas(id) {
+  const ctx = contexts[id];
+  const c   = canvases[id];
+  if (!c || !ctx) return;
+  ctx.clearRect(0, 0, c.width, c.height);
+  if (c._reset) c._reset();
+  drawPaths[id] = [];
+  checkReady();
+}
+
+// ── POPULATE / LOCK FIELDS ───────────────────────────────────
+function set(id, val) {
+  var el = document.getElementById(id);
+  if (el && val !== undefined && val !== null) el.value = val;
+}
+
+function populateInstallerFields(d) {
+  set('f-bizname',    d.bizName);
+  set('f-abn',        d.abn);
+  set('f-responsible',d.ri);
+  set('f-contact',    d.contact);
+  set('f-address',    d.address);
+  set('f-phone',      d.phone);
+  set('f-email',      d.instEmail);
+  set('f-ref',        d.ref);
+  set('f-date',       d.execDate || d.instDate);
+  set('inst-name',    d.instName);
+  set('inst-pos',     d.instPos);
+  set('inst-date',    d.instDate);
+  if (d.delivery) {
+    var radio = document.querySelector('input[name="delivery-opt"][value="' + d.delivery + '"]');
+    if (radio) {
+      radio.checked = true;
+      toggleDeliveryDetails();
+      var dEl = document.getElementById('delivery-detail-' + d.delivery);
+      if (dEl && d.deliveryDetail) dEl.value = d.deliveryDetail;
+    }
+  }
+}
+
+function lockInstallerFields() {
+  ['f-bizname','f-abn','f-responsible','f-contact','f-address',
+   'f-phone','f-email','inst-name','inst-pos','inst-date'
+  ].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) { el.readOnly = true; el.classList.add('locked'); }
+  });
+  document.querySelectorAll('input[name="delivery-opt"]').forEach(function(r) { r.disabled = true; });
+  document.querySelectorAll('.delivery-detail-input').forEach(function(i) {
+    i.readOnly = true; i.classList.add('locked');
+  });
+  var ic = canvases['inst'];
+  if (ic) delete ic.dataset.interactive;
+  var btn = document.getElementById('inst-clear-btn');
+  if (btn) btn.style.display = 'none';
+}
+
+function populatePiFields(d) {
+  set('pi-name', d.piName);
+  set('pi-pos',  d.piPos || 'Director');
+  set('pi-date', d.piDate);
+}
+
+function lockPiFields() {
+  ['pi-name','pi-pos','pi-date'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) { el.readOnly = true; el.classList.add('locked'); }
+  });
+  var pc = canvases['pi'];
+  if (pc) delete pc.dataset.interactive;
+  var btn = document.getElementById('pi-clear-btn');
+  if (btn) btn.style.display = 'none';
+}
+
+// ── COLLECT DATA ─────────────────────────────────────────────
+function collectInstallerData() {
+  var deliveryEl = document.querySelector('input[name="delivery-opt"]:checked');
+  var delivery   = deliveryEl ? deliveryEl.value : '';
+  var dEl        = delivery ? document.getElementById('delivery-detail-' + delivery) : null;
+  return {
+    bizName:       document.getElementById('f-bizname')    ? document.getElementById('f-bizname').value.trim()     : '',
+    abn:           document.getElementById('f-abn')        ? document.getElementById('f-abn').value.trim()         : '',
+    ri:            document.getElementById('f-responsible')? document.getElementById('f-responsible').value.trim() : '',
+    contact:       document.getElementById('f-contact')    ? document.getElementById('f-contact').value.trim()     : '',
+    address:       document.getElementById('f-address')    ? document.getElementById('f-address').value.trim()     : '',
+    phone:         document.getElementById('f-phone')      ? document.getElementById('f-phone').value.trim()       : '',
+    instEmail:     document.getElementById('f-email')      ? document.getElementById('f-email').value.trim()       : '',
+    ref:           document.getElementById('f-ref')        ? document.getElementById('f-ref').value.trim()         : '',
+    instDate:      document.getElementById('inst-date')    ? document.getElementById('inst-date').value.trim()     : '',
+    instName:      document.getElementById('inst-name')    ? document.getElementById('inst-name').value.trim()     : '',
+    instPos:       document.getElementById('inst-pos')     ? document.getElementById('inst-pos').value.trim()      : '',
+    delivery:      delivery,
+    deliveryDetail: dEl ? dEl.value.trim() : '',
+    instPaths:     JSON.parse(JSON.stringify(drawPaths['inst'])),
+  };
+}
+
+// ── READY CHECK ───────────────────────────────────────────────
+function checkReady() {
+  var btn = document.getElementById('submit-btn');
+  if (!btn || btn.style.display === 'none') return;
+  var cb = document.getElementById('agree-check');
+  if (!cb) return;
+  var checked = cb.checked;
+  if (WORKFLOW_MODE === 'installer') {
+    var instSigned = canvases['inst'] && canvases['inst'].hasSigned && canvases['inst'].hasSigned();
+    btn.disabled = !(checked && instSigned);
+  } else if (WORKFLOW_MODE === 'countersign') {
+    var piSigned = canvases['pi'] && canvases['pi'].hasSigned && canvases['pi'].hasSigned();
+    var piNameEl = document.getElementById('pi-name');
+    var piName   = piNameEl ? piNameEl.value.trim() : '';
+    btn.disabled = !(checked && piSigned && piName);
+  }
+}
+
+// ── GENERATE + DOWNLOAD HTML ─────────────────────────────────
+function generateHTML(payload) {
+  var escaped = JSON.stringify(payload)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e');
+  var html = document.documentElement.outerHTML;
+  return html.replace(
+    'window.__AGREEMENT_DATA__ = null;',
+    'window.__AGREEMENT_DATA__ = ' + escaped + ';'
+  );
+}
+
+function downloadHTML(html, filename) {
+  var blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href     = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function() { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
+}
+
+// ── SUBMIT TO PI (Installer action) ─────────────────────────
+function submitToPI() {
+  var d = collectInstallerData();
+  var missing = [];
+  if (!d.bizName)  missing.push('Business Name');
+  if (!d.abn)      missing.push('ABN');
+  if (!d.instName) missing.push('Full Name (Installer signature block)');
+  if (!d.instDate) missing.push('Date (Installer signature block)');
+  if (missing.length) {
+    alert('Please complete the following fields before submitting:\n\n\u2022 ' + missing.join('\n\u2022 '));
+    return;
+  }
+  var instSigned = canvases['inst'] && canvases['inst'].hasSigned && canvases['inst'].hasSigned();
+  if (!instSigned) {
+    alert('Please draw your signature in the Installer signature box before submitting.');
+    return;
+  }
+  var payload  = Object.assign({ mode: 'countersign' }, d);
+  var newHTML  = generateHTML(payload);
+  var safeName = (d.bizName || 'Installer').replace(/[^a-zA-Z0-9]+/g, '_');
+  downloadHTML(newHTML, 'Pi_Agreement_Signed_' + safeName + '.html');
+
+  setTimeout(function() {
+    var subj = encodeURIComponent('Pi \u2013 Installer Agreement Signed | ' + d.bizName);
+    var body = encodeURIComponent(
+      'Hi,\n\n' +
+      'Please find attached the Pi Primary Electrical Installation Agreement signed by ' +
+      d.instName + ' (' + d.bizName + ').\n\n' +
+      'To countersign:\n' +
+      '1. Open the attached HTML file in Chrome or Edge\n' +
+      '2. Review the agreement\n' +
+      '3. Draw your signature and click Execute Agreement\n\n' +
+      'Installer: ' + d.instName + '\n' +
+      'Company:   ' + d.bizName  + '\n' +
+      'ABN:       ' + d.abn      + '\n' +
+      'Signed:    ' + d.instDate + '\n\n' +
+      'Kind regards,\n' + d.instName + '\n' + d.bizName
+    );
+    window.location.href = 'mailto:' + PI_EMAIL + '?subject=' + subj + '&body=' + body;
+  }, 800);
+
+  setTimeout(function() {
+    alert(
+      '\u2713  Signed copy downloaded!\n\n' +
+      'Your email client has opened with a draft to Pi.\n' +
+      'Attach the downloaded HTML file to the email and send it.\n\n' +
+      'Pi will countersign and return a fully executed copy to you.'
+    );
+  }, 1400);
+}
+
+// ── EXECUTE AGREEMENT (Pi countersign action) ────────────────
+function executeAgreement() {
+  var piNameEl = document.getElementById('pi-name');
+  var piDateEl = document.getElementById('pi-date');
+  var piName   = piNameEl ? piNameEl.value.trim() : '';
+  var piDate   = piDateEl ? piDateEl.value.trim() : '';
+  var piPos    = (document.getElementById('pi-pos') || {}).value || 'Director';
+  var piSigned = canvases['pi'] && canvases['pi'].hasSigned && canvases['pi'].hasSigned();
+
+  if (!piName)   { alert('Please enter your full name.'); return; }
+  if (!piDate)   { alert('Please enter today\u2019s date in the Pi Date field.'); return; }
+  if (!piSigned) { alert('Please draw your signature in the Pi signature box.'); return; }
+
+  var instData = window.__AGREEMENT_DATA__ || {};
+  // Capture any updates Pi made to ref/date
+  var updRef  = (document.getElementById('f-ref')  || {}).value || instData.ref;
+  var updDate = (document.getElementById('f-date') || {}).value || piDate;
+
+  var payload = Object.assign({}, instData, {
+    mode:     'executed',
+    piName:   piName,
+    piPos:    piPos,
+    piDate:   piDate,
+    execDate: updDate,
+    ref:      updRef,
+    piPaths:  JSON.parse(JSON.stringify(drawPaths['pi'])),
+  });
+
+  var newHTML  = generateHTML(payload);
+  var safeName = (instData.bizName || 'Installer').replace(/[^a-zA-Z0-9]+/g, '_');
+  var safeDate = piDate.replace(/\s+/g, '_');
+  downloadHTML(newHTML, 'Pi_Agreement_EXECUTED_' + safeName + '_' + safeDate + '.html');
+
+  setTimeout(function() {
+    var instEmail = instData.instEmail || '';
+    var instName  = instData.instName  || 'Installer';
+    var bizName   = instData.bizName   || '';
+    var subj = encodeURIComponent('Pi \u2013 Fully Executed Installer Agreement | ' + bizName);
+    var body = encodeURIComponent(
+      'Dear ' + instName + ',\n\n' +
+      'Please find attached your fully executed Pi Primary Electrical Installation Agreement.\n\n' +
+      'Both parties have now signed. Please keep this for your records.\n' +
+      'Open the attached HTML file to view or print your executed copy.\n\n' +
+      'Reference: ' + (updRef || '') + '\n' +
+      'Execution Date: ' + piDate + '\n\n' +
+      'Kind regards,\n' +
+      'Slade Hata\n' +
+      'Pi Ops Pty Ltd\n' +
+      'admin@principleinnovation.tech'
+    );
+    var bcc = encodeURIComponent(PI_EMAIL);
+    var to  = instEmail || PI_EMAIL;
+    window.location.href = 'mailto:' + to + '?bcc=' + bcc + '&subject=' + subj + '&body=' + body;
+  }, 800);
+
+  setTimeout(function() {
+    alert(
+      '\u2713  Agreement Executed!\n\n' +
+      'The fully executed copy has been downloaded.\n' +
+      'Your email client has opened \u2014 attach the downloaded file and send to the installer.\n\n' +
+      'Both you and the installer now have a fully executed copy.'
+    );
+  }, 1400);
+}
+
+// ── DELIVERY TOGGLE ───────────────────────────────────────────
+function toggleDeliveryDetails() {
+  var sel = document.querySelector('input[name="delivery-opt"]:checked');
+  ['delivery-detail-delivery','delivery-detail-collection','delivery-detail-other'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = (sel && id === 'delivery-detail-' + sel.value) ? 'block' : 'none';
+  });
+}
+
+// ── AUTO DATE PLACEHOLDER ─────────────────────────────────────
+function setTodayPlaceholders() {
+  var today  = new Date();
+  var months = ['January','February','March','April','May','June',
+                'July','August','September','October','November','December'];
+  var fmt = today.getDate() + ' ' + months[today.getMonth()] + ' ' + today.getFullYear();
+  ['f-date','pi-date','inst-date'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el && !el.value) el.placeholder = fmt;
+  });
+}
+</script>
+
+</body>
+</html>

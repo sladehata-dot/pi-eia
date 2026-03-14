@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pi Ops — Installer Onboarding</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy:  #0D1B2A;
+    --blue:  #0A84FF;
+    --green: #10B981;
+    --amber: #F59E0B;
+    --red:   #EF4444;
+    --bg:    #EBEEF2;
+    --card:  #FFFFFF;
+    --gray:  #F5F7FA;
+    --border:#E2E8F0;
+    --text:  #111827;
+    --muted: #6B7280;
+    --font:  'Segoe UI', -apple-system, Arial, sans-serif;
+  }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--navy);
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+  }
+  .header-icon {
+    background: var(--blue);
+    border-radius: 10px;
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 900; color: #fff;
+    flex-shrink: 0;
+  }
+  .header-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #e2e8f0;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .header-sub {
+    font-size: 11px;
+    color: #64748b;
+    font-style: italic;
+    margin-top: 1px;
+  }
+  .header-status {
+    margin-left: auto;
+    font-size: 11px;
+    color: #64748b;
+    letter-spacing: 0.5px;
+  }
+  .dot {
+    display: inline-block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    margin-right: 5px;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.4; }
+  }
+
+  /* ── LAYOUT ── */
+  .page {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 28px 20px 60px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  .col-left  { display: flex; flex-direction: column; gap: 20px; }
+  .col-right { display: flex; flex-direction: column; gap: 20px; }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--card);
+    border-radius: 12px;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.07);
+    overflow: hidden;
+  }
+  .card-head {
+    background: var(--navy);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .card-head-num {
+    background: var(--blue);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    width: 24px; height: 24px;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .card-head-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #e2e8f0;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+  }
+  .card-body { padding: 20px; }
+
+  /* ── PHASE SELECTOR ── */
+  .phase-opts { display: flex; flex-direction: column; gap: 10px; }
+  .phase-opt {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  .phase-opt:has(input:checked) {
+    border-color: var(--blue);
+    background: #EFF6FF;
+  }
+  .phase-opt input[type="radio"] {
+    accent-color: var(--blue);
+    margin-top: 2px;
+    flex-shrink: 0;
+    width: 16px; height: 16px;
+  }
+  .phase-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 2px;
+  }
+  .phase-desc {
+    font-size: 11.5px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  /* ── FORM FIELDS ── */
+  .field { margin-bottom: 14px; }
+  .field:last-child { margin-bottom: 0; }
+  .field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 5px;
+  }
+  .field input, .field select {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: var(--font);
+    color: var(--text);
+    background: var(--card);
+    outline: none;
+    transition: border-color .15s;
+  }
+  .field input:focus, .field select:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(10,132,255,0.1);
+  }
+  .field input::placeholder { color: #c0c8d8; }
+  .field-hint {
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 4px;
+  }
+  .field input:disabled {
+    background: var(--gray);
+    color: #94a3b8;
+    cursor: not-allowed;
+  }
+
+  /* ── PROVIDER ── */
+  .provider-note {
+    font-size: 11px;
+    color: var(--green);
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .custom-smtp {
+    display: none;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ── BUTTONS ── */
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 4px;
+  }
+  .btn {
+    flex: 1;
+    padding: 11px 16px;
+    border: none;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 700;
+    font-family: var(--font);
+    cursor: pointer;
+    transition: opacity .15s, transform .1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+  }
+  .btn:hover   { opacity: .88; }
+  .btn:active  { transform: scale(.97); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+  .btn-test { background: #1e40af; color: #fff; }
+  .btn-send { background: var(--green); color: #fff; }
+
+  /* ── LOG ── */
+  .log-card { grid-column: 1 / -1; }
+  .log-body {
+    background: #0f172a;
+    padding: 16px 18px;
+    min-height: 200px;
+    max-height: 380px;
+    overflow-y: auto;
+    font-family: 'Cascadia Code', 'Consolas', monospace;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: #94a3b8;
+  }
+  .log-line { white-space: pre-wrap; word-break: break-word; }
+  .log-line.ok     { color: #34d399; }
+  .log-line.err    { color: #f87171; }
+  .log-line.warn   { color: #fbbf24; }
+  .log-line.head   { color: #60a5fa; font-weight: 700; }
+  .log-line.info   { color: #a78bfa; }
+  .log-empty {
+    color: #334155;
+    font-style: italic;
+    padding: 20px 0;
+    text-align: center;
+  }
+
+  /* ── STATUS BADGE ── */
+  .status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 18px;
+    background: #0f172a;
+    border-top: 1px solid #1e293b;
+  }
+  .status-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+  }
+  .badge-idle     { background: #1e293b; color: #64748b; }
+  .badge-running  { background: #1e3a5f; color: #60a5fa; animation: pulse 1s infinite; }
+  .badge-success  { background: #064e3b; color: #34d399; }
+  .badge-error    { background: #450a0a; color: #f87171; }
+  .log-clear-btn {
+    background: none;
+    border: none;
+    color: #475569;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: var(--font);
+  }
+  .log-clear-btn:hover { color: #94a3b8; }
+
+  /* ── SPINNER ── */
+  .spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 680px) {
+    .page { grid-template-columns: 1fr; }
+    .log-card { grid-column: 1; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-icon">Pi</div>
+  <div>
+    <div class="header-title">Installer Onboarding</div>
+    <div class="header-sub">Principle and Innovation — Pi Ops</div>
+  </div>
+  <div class="header-status">
+    <span class="dot"></span> localhost:3000
+  </div>
+</div>
+
+<form id="form" onsubmit="return false;">
+<div class="page">
+
+  <!-- LEFT COLUMN -->
+  <div class="col-left">
+
+    <!-- STEP 1: Phase -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-head-num">1</div>
+        <div class="card-head-title">Workflow Phase</div>
+      </div>
+      <div class="card-body">
+        <div class="phase-opts">
+          <label class="phase-opt">
+            <input type="radio" name="phase" value="agreement" checked onchange="onPhaseChange()">
+            <div>
+              <div class="phase-label">Phase 1 — Send Agreement</div>
+              <div class="phase-desc">Sends the digital Pi Installation Agreement to the installer for review and signature. Creates the installer compliance folder.</div>
+            </div>
+          </label>
+          <label class="phase-opt">
+            <input type="radio" name="phase" value="onboarding" onchange="onPhaseChange()">
+            <div>
+              <div class="phase-label">Phase 2 — Full Onboarding</div>
+              <div class="phase-desc">Run once the signed agreement is on file. Sends the compliance documents request with the secure upload portal link.</div>
+            </div>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: Installer Details -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-head-num">2</div>
+        <div class="card-head-title">Installer Details</div>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <label>Installer Full Name *</label>
+          <input id="f-name" type="text" placeholder="e.g. John Smith" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>Company / Business Name</label>
+          <input id="f-company" type="text" placeholder="e.g. Smith Electrical Pty Ltd" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>Installer Email *</label>
+          <input id="f-email" type="email" placeholder="installer@example.com" autocomplete="off">
+        </div>
+        <div class="field">
+          <label id="date-label" style="color:#c0c8d8;">Agreement Execution Date</label>
+          <input id="f-date" type="text" placeholder="e.g. 14 March 2026" disabled>
+          <div class="field-hint" id="date-hint" style="color:#c0c8d8;">Required for Phase 2 only</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div class="col-right">
+
+    <!-- STEP 3: Email Settings -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-head-num">3</div>
+        <div class="card-head-title">Email Settings</div>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <label>Mail Provider</label>
+          <select id="f-provider" onchange="onProviderChange()">
+            <option value="Principle Innovation (.tech)" selected>Principle Innovation (.tech)  —  mail.principleinnovation.tech</option>
+            <option value="Gmail (smtp.gmail.com)">Gmail  (smtp.gmail.com)</option>
+            <option value="Outlook / Microsoft 365">Outlook / Microsoft 365</option>
+            <option value="Zoho Mail">Zoho Mail  (smtp.zoho.com.au)</option>
+            <option value="Custom SMTP…">Custom SMTP…</option>
+          </select>
+          <div class="provider-note">✓ Principle Innovation pre-configured — port 465 SSL</div>
+        </div>
+
+        <div class="custom-smtp" id="custom-smtp">
+          <div class="field">
+            <label>SMTP Host</label>
+            <input id="f-smtp-host" type="text" placeholder="mail.yourdomain.com">
+          </div>
+          <div class="field">
+            <label>SMTP Port</label>
+            <input id="f-smtp-port" type="number" value="465" placeholder="465">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Email Password</label>
+          <input id="f-password" type="password" placeholder="Your email account password" autocomplete="new-password">
+          <div class="field-hint">Not stored. Used only for this session to send the email.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: Actions -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-head-num">4</div>
+        <div class="card-head-title">Actions</div>
+      </div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6;">
+          <strong>Test Run</strong> saves files locally and shows what would happen — no email is sent.<br>
+          <strong>Send Real Email</strong> sends the live email to the installer.
+        </p>
+        <div class="btn-row">
+          <button class="btn btn-test" id="btn-test" onclick="doRun(true)">
+            <span>🔍</span> Test Run
+          </button>
+          <button class="btn btn-send" id="btn-send" onclick="doRun(false)">
+            <span>✉</span> Send Real Email
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- LOG — full width -->
+  <div class="card log-card">
+    <div class="card-head">
+      <div class="card-head-num" style="background:#1e293b;">✦</div>
+      <div class="card-head-title">Output Log</div>
+    </div>
+    <div class="log-body" id="log">
+      <div class="log-empty" id="log-empty">Run a test or send an email — output will appear here.</div>
+    </div>
+    <div class="status-row">
+      <span class="status-badge badge-idle" id="status-badge">IDLE</span>
+      <button class="log-clear-btn" onclick="clearLog()">Clear log</button>
+    </div>
+  </div>
+
+</div>
+</form>
+
+<script>
+// ── Phase change ──────────────────────────────────────────────────────────────
+function onPhaseChange() {
+  const phase = document.querySelector('input[name="phase"]:checked').value;
+  const p2    = phase === 'onboarding';
+  const lbl   = document.getElementById('date-label');
+  const inp   = document.getElementById('f-date');
+  const hint  = document.getElementById('date-hint');
+
+  lbl.style.color  = p2 ? 'var(--muted)' : '#c0c8d8';
+  hint.style.color = p2 ? '#94a3b8'      : '#c0c8d8';
+  inp.disabled     = !p2;
+  if (!p2) inp.value = '';
+}
+
+// ── Provider change ───────────────────────────────────────────────────────────
+function onProviderChange() {
+  const v    = document.getElementById('f-provider').value;
+  const note = document.querySelector('.provider-note');
+  const cust = document.getElementById('custom-smtp');
+
+  if (v === 'Custom SMTP…') {
+    cust.style.display = 'block';
+    note.textContent   = '';
+  } else {
+    cust.style.display = 'none';
+    const labels = {
+      'Principle Innovation (.tech)': '✓ Principle Innovation pre-configured — port 465 SSL',
+      'Gmail (smtp.gmail.com)':       '✓ Gmail pre-configured — use an App Password',
+      'Outlook / Microsoft 365':      '✓ Outlook pre-configured — port 587 TLS',
+      'Zoho Mail':                    '✓ Zoho pre-configured — port 465 SSL',
+    };
+    note.textContent = labels[v] || '';
+  }
+}
+
+// ── Validate form ─────────────────────────────────────────────────────────────
+function validate() {
+  const name  = document.getElementById('f-name').value.trim();
+  const email = document.getElementById('f-email').value.trim();
+  const phase = document.querySelector('input[name="phase"]:checked').value;
+  const date  = document.getElementById('f-date').value.trim();
+  const prov  = document.getElementById('f-provider').value;
+  const host  = document.getElementById('f-smtp-host').value.trim();
+
+  const errs = [];
+  if (!name)  errs.push('Installer Name is required');
+  if (!email) errs.push('Installer Email is required');
+  else if (!email.includes('@')) errs.push('Installer Email looks invalid');
+  if (phase === 'onboarding' && !date) errs.push('Agreement Execution Date is required for Phase 2');
+  if (prov === 'Custom SMTP…' && !host) errs.push('SMTP Host is required for a custom provider');
+
+  if (errs.length) {
+    alert('Please fix the following:\n\n• ' + errs.join('\n• '));
+    return false;
+  }
+  return true;
+}
+
+// ── Run ───────────────────────────────────────────────────────────────────────
+async function doRun(dryRun) {
+  if (!validate()) return;
+
+  const password = document.getElementById('f-password').value;
+  if (!dryRun && !password) {
+    alert('Please enter your email password before sending a real email.');
+    document.getElementById('f-password').focus();
+    return;
+  }
+
+  const payload = {
+    phase:       document.querySelector('input[name="phase"]:checked').value,
+    name:        document.getElementById('f-name').value.trim(),
+    company:     document.getElementById('f-company').value.trim(),
+    email:       document.getElementById('f-email').value.trim(),
+    date:        document.getElementById('f-date').value.trim(),
+    dry_run:     dryRun,
+    password:    password,
+    provider:    document.getElementById('f-provider').value,
+    custom_host: document.getElementById('f-smtp-host').value.trim(),
+    custom_port: parseInt(document.getElementById('f-smtp-port').value) || 465,
+  };
+
+  // Lock buttons
+  setRunning(true);
+  clearLog();
+  setBadge('running', 'RUNNING…');
+
+  try {
+    const resp = await fetch('/run', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload),
+    });
+
+    const reader  = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let   buf     = '';
+    let   success = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const parts = buf.split('\n\n');
+      buf = parts.pop();   // keep incomplete chunk
+      for (const part of parts) {
+        if (!part.startsWith('data:')) continue;
+        const json = part.replace(/^data:\s*/, '');
+        try {
+          const ev = JSON.parse(json);
+          if (ev.type === 'log')   appendLog(ev.msg);
+          if (ev.type === 'done')  { success = ev.ok; }
+          if (ev.type === 'error') { appendLog('[ERROR] ' + ev.msg, 'err'); success = false; }
+        } catch {}
+      }
+    }
+
+    if (success === true)  setBadge('success', dryRun ? 'TEST COMPLETE' : 'EMAIL SENT ✓');
+    else if (success === false) setBadge('error', 'FAILED — see log');
+    else setBadge('idle', 'DONE');
+
+  } catch (e) {
+    appendLog('[ERROR] ' + e.message, 'err');
+    setBadge('error', 'ERROR');
+  } finally {
+    setRunning(false);
+  }
+}
+
+// ── Log helpers ───────────────────────────────────────────────────────────────
+function appendLog(text, forceClass) {
+  const log = document.getElementById('log');
+  const empty = document.getElementById('log-empty');
+  if (empty) empty.remove();
+
+  const lines = text.split('\n');
+  lines.forEach(line => {
+    if (!line && lines.length > 1) return;  // skip blank between lines
+    const div = document.createElement('div');
+    div.className = 'log-line';
+
+    if (forceClass) {
+      div.classList.add(forceClass);
+    } else if (/\[OK\]|\[✓\]|COMPLETE|✓/.test(line)) {
+      div.classList.add('ok');
+    } else if (/\[ERROR\]|ERROR|FAILED/.test(line)) {
+      div.classList.add('err');
+    } else if (/\[WARN\]|WARNING/.test(line)) {
+      div.classList.add('warn');
+    } else if (/^={3,}|^-{3,}|PI OPS|PHASE/.test(line.trim())) {
+      div.classList.add('head');
+    } else if (/\[DRY RUN\]|DRY RUN/.test(line)) {
+      div.classList.add('info');
+    }
+    div.textContent = line;
+    log.appendChild(div);
+  });
+  log.scrollTop = log.scrollHeight;
+}
+
+function clearLog() {
+  const log = document.getElementById('log');
+  log.innerHTML = '<div class="log-empty" id="log-empty">Run a test or send an email — output will appear here.</div>';
+  setBadge('idle', 'IDLE');
+}
+
+function setBadge(state, text) {
+  const b = document.getElementById('status-badge');
+  b.className = 'status-badge badge-' + state;
+  b.textContent = text;
+}
+
+function setRunning(running) {
+  document.getElementById('btn-test').disabled = running;
+  document.getElementById('btn-send').disabled = running;
+  if (running) {
+    document.getElementById('btn-test').innerHTML = '<div class="spinner"></div> Running…';
+    document.getElementById('btn-send').innerHTML = '<div class="spinner"></div> Running…';
+  } else {
+    document.getElementById('btn-test').innerHTML = '<span>🔍</span> Test Run';
+    document.getElementById('btn-send').innerHTML = '<span>✉</span> Send Real Email';
+  }
+}
+</script>
+</body>
+</html>
