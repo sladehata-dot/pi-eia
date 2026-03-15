@@ -1601,9 +1601,11 @@ function applyMode() {
     // Pi side: show form, hide pending
     document.getElementById('pi-sig-pending').style.display = 'none';
     document.getElementById('pi-sig-form').style.display    = 'block';
-    // Pi canvas: interactive
-    const pc = canvases['pi'];
-    if (pc) pc.dataset.interactive = 'true';
+    // Pi canvas: was hidden at init so had 0×0 dimensions — resize now it is visible
+    requestAnimationFrame(function() {
+      if (canvases['pi'] && canvases['pi']._resize) canvases['pi']._resize();
+      if (canvases['pi']) canvases['pi'].dataset.interactive = 'true';
+    });
     // Submit
     const btn = document.getElementById('submit-btn');
     btn.onclick = executeAgreement;
@@ -1728,6 +1730,7 @@ function initCanvas(id) {
   canvases[id] = canvas;
   contexts[id] = canvas.getContext('2d');
   canvases[id].hasSigned = () => hasSigned;
+  canvases[id]._resize  = resize;
   canvases[id]._reset = () => {
     hasSigned = false;
     drawPaths[id] = [];
@@ -1829,6 +1832,12 @@ function lockInstallerFields() {
   document.querySelectorAll('input[name="delivery-opt"]').forEach(function(r) { r.disabled = true; });
   document.querySelectorAll('.delivery-detail-input').forEach(function(i) {
     i.readOnly = true; i.classList.add('locked');
+  });
+  // Hide non-selected delivery options so Pi sees only the installer's choice
+  var selDelivery = document.querySelector('input[name="delivery-opt"]:checked');
+  document.querySelectorAll('.delivery-opt').forEach(function(opt) {
+    var inp = opt.querySelector('input[type="radio"]');
+    if (inp && inp !== selDelivery) opt.style.display = 'none';
   });
   var ic = canvases['inst'];
   if (ic) delete ic.dataset.interactive;
