@@ -648,7 +648,7 @@ def build_agreement_email_html(installer_name: str, company_name: str,
                 </td>
               </tr>
               <tr>
-                <td width="32" style="vertical-align:top;padding:2px 12px 0;">
+                <td width="32" style="vertical-align:top;padding:2px 12px 0 0;">
                   <div style="background:#0A84FF;color:#fff;border-radius:50%;width:24px;height:24px;
                                text-align:center;line-height:24px;font-weight:700;font-size:12px;">5</div>
                 </td>
