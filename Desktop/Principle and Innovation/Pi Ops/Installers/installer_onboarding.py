@@ -52,6 +52,7 @@ import urllib.parse
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
+from email.utils import formataddr
 from datetime import datetime
 from pathlib import Path
 
@@ -406,6 +407,7 @@ def send_onboarding_email(installer_name: str, company_name: str,
         "installer": installer_name,
         "company":   company_name or "",
         "date":      agreement_date,
+        "email":     installer_email or "",
     })
     portal_url = f"{UPLOAD_PORTAL_BASE}?{portal_params}"
 
@@ -571,62 +573,169 @@ def send_signed_to_pi(installer_name: str, company_name: str,
             server.sendmail(PI_EMAIL, [PI_EMAIL], msg.as_string())
 
 
+# ── NOTIFY: DOCUMENT UPLOAD CONFIRMATION ─────────────────────────────────────
+
+def send_upload_confirmation(installer_name: str, company_name: str,
+                             installer_email: str, uploaded_files: list,
+                             smtp_cfg: dict) -> None:
+    """Email the installer (and BCC Pi) confirming their document uploads were received.
+    uploaded_files is a list of dicts: [{category, filename}, ...]"""
+    import ssl as _ssl
+
+    port     = int(smtp_cfg.get("smtp_port", 465))
+    to_email = installer_email or PI_EMAIL
+
+    # Group files by category label for the email body
+    cat_labels = {
+        "accreditations": "SAA / CEC Accreditation",
+        "licences":        "Electrical Licences",
+        "insurance":       "Insurance",
+        "company-docs":    "Company / Business Documentation",
+    }
+    grouped: dict = {}
+    for item in uploaded_files:
+        label = cat_labels.get(item.get("category", ""), item.get("category", "Other"))
+        grouped.setdefault(label, []).append(item.get("filename", ""))
+
+    rows_html = ""
+    for label, files in grouped.items():
+        rows_html += f"""
+        <tr>
+          <td style="padding:8px 16px 8px 0;font-weight:700;vertical-align:top;
+                     font-size:13px;color:#444;white-space:nowrap;">{label}</td>
+          <td style="padding:8px 0;font-size:13px;color:#555;">
+            {"<br>".join(f"&#x2713;&nbsp;{fn}" for fn in files)}
+          </td>
+        </tr>"""
+
+    body_html = f"""
+      <p style="font-family:Arial,sans-serif;font-size:14px;color:#333;margin:0 0 16px;">
+        Dear {installer_name},</p>
+      <p style="font-family:Arial,sans-serif;font-size:14px;color:#333;margin:0 0 16px;">
+        We have received your compliance documents for
+        <strong>{company_name or installer_name}</strong>.
+        The following files have been saved to your Pi compliance folder:</p>
+      <table style="font-family:Arial,sans-serif;border-collapse:collapse;
+                    margin:0 0 20px;width:100%;max-width:520px;">
+        {rows_html}
+      </table>
+      <p style="font-family:Arial,sans-serif;font-size:13px;color:#555;margin:0 0 24px;">
+        Pi will review your documents and be in touch if anything further is required.
+        If you need to submit additional files you can return to the upload portal at any time.</p>
+      <p style="font-family:Arial,sans-serif;font-size:14px;color:#333;margin:0;">
+        Sincerely,<br>
+        <strong>Admin Team &mdash; Principle and Innovation (Pi)</strong><br>
+        <a href="mailto:{PI_EMAIL}" style="color:#0A84FF;">{PI_EMAIL}</a></p>"""
+
+    ctx = _ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode    = _ssl.CERT_NONE
+
+    def _send(to_addr: str, label: str) -> None:
+        m = MIMEMultipart("alternative")
+        m["Subject"] = f"Pi \u2013 Documents Received | {company_name or installer_name}"
+        m["From"]    = formataddr(("Admin Team - Principle and Innovation (Pi)", PI_EMAIL))
+        m["To"]      = to_addr
+        m.attach(MIMEText(body_html, "html"))
+        try:
+            if port == 465:
+                with smtplib.SMTP_SSL(smtp_cfg["smtp_host"], port, context=ctx) as srv:
+                    srv.login(smtp_cfg["smtp_user"], smtp_cfg["smtp_password"])
+                    srv.sendmail(PI_EMAIL, [to_addr], m.as_string())
+            else:
+                with smtplib.SMTP(smtp_cfg["smtp_host"], port) as srv:
+                    srv.starttls(context=ctx)
+                    srv.login(smtp_cfg["smtp_user"], smtp_cfg["smtp_password"])
+                    srv.sendmail(PI_EMAIL, [to_addr], m.as_string())
+            print(f"  [OK] Upload confirmation sent to {label} ({to_addr})")
+        except Exception as exc:
+            print(f"  [WARN] Could not send confirmation to {label}: {exc}")
+
+    if installer_email and installer_email.lower() != PI_EMAIL.lower():
+        _send(installer_email, "installer")
+    _send(PI_EMAIL, "Pi")
+
+
 # ── NOTIFY BOTH: EXECUTED AGREEMENT ──────────────────────────────────────────
 
 def send_executed_to_both(installer_name: str, company_name: str,
                           installer_email: str, ref: str, exec_date: str,
-                          executed_html: str, smtp_cfg: dict) -> None:
-    """Email the fully executed agreement to the installer and BCC Pi.
-    Called by app.py /execute-agreement after Pi countersigns."""
+                          executed_html: str, smtp_cfg: dict) -> str:
+    """Save the executed agreement into the installer's Agreements folder, then
+    send confirmation emails separately to the installer and Pi.
+    Returns the relative path (from INSTALLERS_BASE_PATH) for the download route.
+    NOTE: HTML is saved locally rather than attached — large HTML attachments with
+    embedded scripts are rejected by outbound spam filters."""
+
+    # ── Save executed copy → installer's Agreements subfolder ────────────────
+    folder_name = sanitize_folder_name(get_display_name(company_name, installer_name))
+    agreements_dir = INSTALLERS_BASE_PATH / folder_name / "Agreements"
+    agreements_dir.mkdir(parents=True, exist_ok=True)
     safe_name = re.sub(r'[^a-zA-Z0-9]+', '_', company_name)
-    filename  = f"Pi_Agreement_EXECUTED_{safe_name}.html"
-    port      = int(smtp_cfg.get("smtp_port", 465))
-    to_email  = installer_email or PI_EMAIL
+    ts        = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename  = f"Pi_Agreement_EXECUTED_{safe_name}_{ts}.html"
+    save_path = agreements_dir / filename
+    save_path.write_text(executed_html, encoding="utf-8")
+    rel_path  = f"{folder_name}/Agreements/{filename}"
+    print(f"  Executed copy saved → Installers/{rel_path}")
 
-    msg            = MIMEMultipart("mixed")
-    msg["Subject"] = f"Pi \u2013 Fully Executed Installer Agreement | {company_name}"
-    msg["From"]    = f"Admin Team \u2014 Principle and Innovation (Pi) <{PI_EMAIL}>"
-    msg["To"]      = to_email
-    msg["Bcc"]     = PI_EMAIL
-
+    # ── Build email body (used for both recipients) ───────────────────────────
     body_html = f"""<p style="font-family:Arial,sans-serif;font-size:14px;color:#333;margin:0 0 16px;">
         Dear {installer_name},</p>
       <p style="font-family:Arial,sans-serif;font-size:14px;color:#333;margin:0 0 16px;">
         Your <strong>Pi Primary Electrical Installation Agreement</strong> has been
-        fully executed by both parties. The executed copy is attached for your records.</p>
+        fully executed by both parties and is now on file with Pi.</p>
       <table style="font-family:Arial,sans-serif;font-size:13px;color:#444;border-collapse:collapse;margin:0 0 20px;">
         <tr><td style="padding:4px 20px 4px 0;font-weight:bold;">Company</td><td>{company_name}</td></tr>
         <tr><td style="padding:4px 20px 4px 0;font-weight:bold;">Reference</td><td>{ref}</td></tr>
         <tr><td style="padding:4px 20px 4px 0;font-weight:bold;">Execution Date</td><td>{exec_date}</td></tr>
       </table>
       <p style="font-family:Arial,sans-serif;font-size:13px;color:#555;margin:0 0 24px;">
-        Open the attached HTML file in Chrome or Edge to view or print your executed copy.</p>
+        Please keep this email as your confirmation of execution. If you require a copy
+        of the executed agreement please contact us at
+        <a href="mailto:{PI_EMAIL}" style="color:#0A84FF;">{PI_EMAIL}</a>.</p>
       <p style="font-family:Arial,sans-serif;font-size:14px;color:#333;margin:0;">
         Sincerely,<br>
         <strong>Admin Team &mdash; Principle and Innovation (Pi)</strong><br>
         <a href="mailto:{PI_EMAIL}" style="color:#0A84FF;">{PI_EMAIL}</a></p>"""
 
-    body_part = MIMEMultipart("alternative")
-    body_part.attach(MIMEText(body_html, "html"))
-    msg.attach(body_part)
-
-    att = MIMEApplication(executed_html.encode("utf-8"), Name=filename)
-    att.add_header("Content-Disposition", "attachment", filename=filename)
-    msg.attach(att)
-
     import ssl as _ssl
     ctx = _ssl.create_default_context()
     ctx.check_hostname = False
     ctx.verify_mode    = _ssl.CERT_NONE
-    if port == 465:
-        with smtplib.SMTP_SSL(smtp_cfg["smtp_host"], port, context=ctx) as server:
-            server.login(smtp_cfg["smtp_user"], smtp_cfg["smtp_password"])
-            server.sendmail(PI_EMAIL, [to_email, PI_EMAIL], msg.as_string())
+    port = int(smtp_cfg.get("smtp_port", 465))
+
+    def _send(to_addr: str, label: str) -> None:
+        """Send one confirmation email to a single recipient."""
+        m          = MIMEMultipart("alternative")
+        m["Subject"] = f"Pi \u2013 Fully Executed Installer Agreement | {company_name}"
+        m["From"]    = formataddr(("Admin Team - Principle and Innovation (Pi)", PI_EMAIL))
+        m["To"]      = to_addr
+        m.attach(MIMEText(body_html, "html"))
+        try:
+            if port == 465:
+                with smtplib.SMTP_SSL(smtp_cfg["smtp_host"], port, context=ctx) as srv:
+                    srv.login(smtp_cfg["smtp_user"], smtp_cfg["smtp_password"])
+                    srv.sendmail(PI_EMAIL, [to_addr], m.as_string())
+            else:
+                with smtplib.SMTP(smtp_cfg["smtp_host"], port) as srv:
+                    srv.starttls(context=ctx)
+                    srv.login(smtp_cfg["smtp_user"], smtp_cfg["smtp_password"])
+                    srv.sendmail(PI_EMAIL, [to_addr], m.as_string())
+            print(f"  [OK] Executed confirmation sent to {label} ({to_addr})")
+        except Exception as exc:
+            print(f"  [WARN] Could not send to {label} ({to_addr}): {exc}")
+
+    # Send to installer (if email provided and different from Pi)
+    if installer_email and installer_email.lower() != PI_EMAIL.lower():
+        _send(installer_email, "installer")
     else:
-        with smtplib.SMTP(smtp_cfg["smtp_host"], port) as server:
-            server.starttls(context=ctx)
-            server.login(smtp_cfg["smtp_user"], smtp_cfg["smtp_password"])
-            server.sendmail(PI_EMAIL, [to_email, PI_EMAIL], msg.as_string())
+        print(f"  [INFO] Installer email not sent (same as Pi or blank)")
+
+    # Always notify Pi
+    _send(PI_EMAIL, "Pi")
+
+    return rel_path
 
 
 # ── STEP 0: AGREEMENT EMAIL (PHASE 1) ─────────────────────────────────────────

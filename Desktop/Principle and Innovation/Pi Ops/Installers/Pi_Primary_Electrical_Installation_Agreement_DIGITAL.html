@@ -1625,7 +1625,10 @@ function applyMode() {
     document.getElementById('pi-sig-form').style.display    = 'block';
     populatePiFields(d);
     lockPiFields();
-    requestAnimationFrame(() => replaySignature('pi', d.piPaths || []));
+    requestAnimationFrame(function() {
+      if (canvases['pi'] && canvases['pi']._resize) canvases['pi']._resize();
+      replaySignature('pi', d.piPaths || []);
+    });
     // Pre-tick + disable checkbox
     const cb = document.getElementById('agree-check');
     if (cb) { cb.checked = true; cb.disabled = true; }
@@ -1848,7 +1851,15 @@ function lockInstallerFields() {
 function populatePiFields(d) {
   set('pi-name', d.piName);
   set('pi-pos',  d.piPos || 'Director');
-  set('pi-date', d.piDate);
+  if (d.piDate) {
+    set('pi-date', d.piDate);
+  } else {
+    // Default to today when Pi is countersigning for the first time
+    var _n = new Date();
+    var _months = ['January','February','March','April','May','June',
+                   'July','August','September','October','November','December'];
+    set('pi-date', _n.getDate() + ' ' + _months[_n.getMonth()] + ' ' + _n.getFullYear());
+  }
 }
 
 function lockPiFields() {
@@ -1909,9 +1920,11 @@ function generateHTML(payload) {
     .replace(/</g, '\\u003c')
     .replace(/>/g, '\\u003e');
   var html = document.documentElement.outerHTML;
+  // Use the sentinel comment markers so the replace works whether the current
+  // value is null (fresh template) or a previous payload (countersign → executed).
   return html.replace(
-    'window.__AGREEMENT_DATA__ = null;',
-    'window.__AGREEMENT_DATA__ = ' + escaped + ';'
+    /\/\* __AGREEMENT_DATA_START__ \*\/[\s\S]*?\/\* __AGREEMENT_DATA_END__ \*\//,
+    '/* __AGREEMENT_DATA_START__ */ window.__AGREEMENT_DATA__ = ' + escaped + '; /* __AGREEMENT_DATA_END__ */'
   );
 }
 
@@ -2039,19 +2052,21 @@ function executeAgreement() {
       execDate:  piDate
     })
   }).then(function(r) { return r.json(); }).then(function(result) {
-    // Always download a local copy for Pi's records
-    downloadHTML(newHTML, 'Pi_Agreement_EXECUTED_' + safeName + '_' + safeDate + '.html');
     if (result.ok) {
+      // Open the server-saved executed copy in a new tab (no email attachment = no spam filter)
+      var downloadUrl = 'http://localhost:3000/executed/' + encodeURIComponent(result.file);
       alert(
         '\u2713  Agreement fully executed!\n\n' +
-        'Executed copies have been emailed to both parties.\n' +
-        'A local copy has also been saved to your Downloads.'
+        'Confirmation emails have been sent to both parties.\n' +
+        'Click OK to open the executed copy \u2014 use Ctrl+P to print or save as PDF.'
       );
+      window.open(downloadUrl, '_blank');
     } else {
+      downloadHTML(newHTML, 'Pi_Agreement_EXECUTED_' + safeName + '_' + safeDate + '.html');
       alert(
         '\u26a0  Could not send emails automatically.\n\n' +
         'Error: ' + result.error + '\n\n' +
-        'The executed copy has been downloaded — please\n' +
+        'The executed copy has been downloaded \u2014 please\n' +
         'forward it manually to: ' + (instData.instEmail || PI_EMAIL)
       );
     }
@@ -2082,7 +2097,10 @@ function setTodayPlaceholders() {
   var fmt = today.getDate() + ' ' + months[today.getMonth()] + ' ' + today.getFullYear();
   ['f-date','pi-date','inst-date'].forEach(function(id) {
     var el = document.getElementById(id);
-    if (el && !el.value) el.placeholder = fmt;
+    if (el && !el.value) {
+      el.placeholder = fmt;
+      el.value = fmt;   // default to today; populateXxxFields() will override if stored data exists
+    }
   });
   // Default reference: dd/mm/yyyy (company name appended once known)
   var dd   = String(today.getDate()).padStart(2,'0');

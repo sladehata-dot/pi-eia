@@ -14,6 +14,7 @@ import queue
 import threading
 import webbrowser
 from pathlib import Path
+from werkzeug.utils import secure_filename
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context, send_file
 
 # ── Import business logic from installer_onboarding.py ────────────────────────
@@ -219,7 +220,7 @@ def submit_agreement():
 
 @app.route("/execute-agreement", methods=["POST", "OPTIONS"])
 def execute_agreement():
-    """Email the fully executed agreement to the installer and Pi."""
+    """Save the executed agreement to disk and email confirmation to both parties."""
     if request.method == "OPTIONS":
         return jsonify({}), 200
 
@@ -234,12 +235,85 @@ def execute_agreement():
         inst_email = data.get("instEmail", "")
         ref        = data.get("ref",       "")
         exec_date  = data.get("execDate",  "")
-        onb.send_executed_to_both(
+        filename = onb.send_executed_to_both(
             inst_name, biz_name, inst_email, ref, exec_date, html, _cached_smtp
+        )
+        return jsonify({"ok": True, "file": filename})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)})
+
+
+@app.route("/installer-upload")
+def installer_upload():
+    """Serve the document upload portal, pre-filled with installer details from query params."""
+    installer = request.args.get("installer", "")
+    company   = request.args.get("company",   "")
+    date      = request.args.get("date",      "")
+    email     = request.args.get("email",     "")
+    return render_template("installer_upload.html",
+                           installer=installer, company=company,
+                           date=date, email=email)
+
+
+@app.route("/upload-doc", methods=["POST"])
+def upload_doc():
+    """Receive a single document upload and save it to the installer's compliance folder."""
+    installer = request.form.get("installer", "").strip()
+    company   = request.form.get("company",   "").strip()
+    category  = request.form.get("category",  "").strip()
+    f         = request.files.get("file")
+
+    if not f or not f.filename:
+        return jsonify({"ok": False, "error": "No file received."})
+
+    # Map category key → subfolder name
+    folder_map = {
+        "accreditations": "Accreditations",
+        "licences":        "Licences",
+        "insurance":       "Insurance",
+        "company-docs":    "Company Documents",
+    }
+    subfolder = folder_map.get(category, "Company Documents")
+
+    # Derive installer folder (same logic as create_installer_folder)
+    folder_name = onb.sanitize_folder_name(onb.get_display_name(company, installer))
+    save_dir    = onb.INSTALLERS_BASE_PATH / folder_name / subfolder
+    save_dir.mkdir(parents=True, exist_ok=True)
+
+    filename  = secure_filename(f.filename)
+    save_path = save_dir / filename
+    f.save(str(save_path))
+    print(f"  [Upload] {installer} / {subfolder} / {filename}")
+    return jsonify({"ok": True, "saved": f"{folder_name}/{subfolder}/{filename}"})
+
+
+@app.route("/confirm-upload", methods=["POST"])
+def confirm_upload():
+    """Send a confirmation email to the installer (and Pi) listing all uploaded files."""
+    if not _cached_smtp:
+        return jsonify({"ok": False,
+                        "error": "Email not configured — please run Phase 1 first so Pi's SMTP is set up."})
+    try:
+        data           = request.get_json(force=True)
+        installer      = data.get("installer",      "")
+        company        = data.get("company",        "")
+        installer_email = data.get("email",         "")
+        uploaded_files = data.get("files",          [])
+        onb.send_upload_confirmation(
+            installer, company, installer_email, uploaded_files, _cached_smtp
         )
         return jsonify({"ok": True})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)})
+
+
+@app.route("/executed/<path:rel_path>")
+def download_executed(rel_path):
+    """Serve a previously saved executed agreement HTML file.
+    rel_path is relative to the Installers base folder, e.g.:
+      CompanyName/Agreements/Pi_Agreement_EXECUTED_....html"""
+    full_path = onb.INSTALLERS_BASE_PATH / rel_path
+    return send_file(str(full_path), mimetype="text/html", as_attachment=False)
 
 
 # ── Launch ─────────────────────────────────────────────────────────────────────

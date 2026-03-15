@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pi Ops — Document Upload Portal</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy:  #0D1B2A;
+    --blue:  #0A84FF;
+    --green: #10B981;
+    --amber: #F59E0B;
+    --red:   #EF4444;
+    --bg:    #EBEEF2;
+    --card:  #FFFFFF;
+    --border:#E2E8F0;
+    --text:  #111827;
+    --muted: #6B7280;
+    --font:  'Segoe UI', -apple-system, Arial, sans-serif;
+  }
+
+  body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: 14px; min-height: 100vh; }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--navy); padding: 18px 28px;
+    display: flex; align-items: center; gap: 14px;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  }
+  .header-icon {
+    background: var(--blue); border-radius: 10px; width: 38px; height: 38px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; font-weight: 900; color: #fff; flex-shrink: 0;
+  }
+  .header-title { font-size: 14px; font-weight: 700; color: #e2e8f0; letter-spacing: 0.8px; text-transform: uppercase; }
+  .header-sub   { font-size: 11px; color: #64748b; font-style: italic; margin-top: 1px; }
+
+  /* ── PAGE ── */
+  .page { max-width: 720px; margin: 0 auto; padding: 28px 16px 60px; display: flex; flex-direction: column; gap: 20px; }
+
+  /* ── CARD ── */
+  .card { background: var(--card); border-radius: 12px; box-shadow: 0 1px 8px rgba(0,0,0,0.07); overflow: hidden; }
+  .card-head { background: var(--navy); padding: 11px 20px; display: flex; align-items: center; gap: 10px; }
+  .card-head-icon  { font-size: 16px; flex-shrink: 0; }
+  .card-head-title { font-size: 12px; font-weight: 700; color: #e2e8f0; letter-spacing: 0.7px; text-transform: uppercase; }
+  .card-head-sub   { font-size: 11px; color: #64748b; margin-left: auto; transition: color .3s; }
+  .card-body { padding: 18px 20px; }
+
+  /* ── WELCOME ── */
+  .welcome-name  { font-size: 17px; font-weight: 700; color: var(--navy); margin-bottom: 6px; }
+  .welcome-meta  { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+  .welcome-intro { font-size: 13px; color: #374151; line-height: 1.7; }
+  .welcome-intro strong { color: var(--navy); }
+  .step-hint {
+    display: flex; align-items: flex-start; gap: 10px;
+    margin-top: 14px; padding: 11px 14px;
+    background: #EFF6FF; border-radius: 8px;
+    border-left: 3px solid var(--blue);
+  }
+  .step-hint-num {
+    background: var(--blue); color: #fff; font-size: 11px; font-weight: 800;
+    width: 20px; height: 20px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;
+  }
+  .step-hint-text { font-size: 12px; color: #1e40af; line-height: 1.55; }
+
+  /* ── DOC LIST ── */
+  .doc-list { list-style: none; margin: 12px 0 0; }
+  .doc-list li {
+    font-size: 12px; color: #374151; padding: 5px 0 5px 18px;
+    border-bottom: 1px solid var(--border); position: relative; line-height: 1.5;
+  }
+  .doc-list li:last-child { border-bottom: none; }
+  .doc-list li::before { content: '•'; position: absolute; left: 4px; color: var(--blue); font-weight: 700; }
+
+  /* ── DROP ZONE ── */
+  .drop-zone {
+    border: 2px dashed var(--border); border-radius: 10px; padding: 22px 16px;
+    text-align: center; cursor: pointer;
+    transition: border-color .15s, background .15s;
+    margin-top: 14px; background: #f8fafc;
+  }
+  .drop-zone:hover, .drop-zone.drag-over { border-color: var(--blue); background: #EFF6FF; }
+  .drop-zone-icon  { font-size: 28px; margin-bottom: 6px; }
+  .drop-zone-label { font-size: 13px; font-weight: 600; color: var(--navy); margin-bottom: 3px; }
+  .drop-zone-hint  { font-size: 11px; color: var(--muted); }
+  .drop-zone input[type="file"] { display: none; }
+
+  /* ── FILE LIST ── */
+  .file-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .file-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 12px; background: #f8fafc;
+    border: 1px solid var(--border); border-radius: 8px; font-size: 12px;
+  }
+  .file-item-name   { flex: 1; color: var(--text); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-item-status { font-size: 11px; font-weight: 700; flex-shrink: 0; }
+  .status-uploading { color: var(--blue); }
+  .status-done      { color: var(--green); }
+  .status-error     { color: var(--red); }
+
+  /* ── SUBMIT CARD ── */
+  .submit-card-body {
+    padding: 22px 24px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .submit-summary {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 16px; background: #f8fafc;
+    border: 1px solid var(--border); border-radius: 10px;
+  }
+  .submit-summary-count { font-size: 32px; font-weight: 800; color: var(--green); flex-shrink: 0; line-height: 1; }
+  .submit-summary-label { font-size: 13px; font-weight: 600; color: var(--navy); margin-bottom: 2px; }
+  .submit-summary-hint  { font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+  .submit-warning {
+    font-size: 12px; color: #92400e;
+    background: #fffbeb; border: 1px solid #fde68a;
+    border-radius: 8px; padding: 10px 14px; line-height: 1.55;
+  }
+  .btn-submit-all {
+    width: 100%; padding: 15px 20px;
+    background: var(--green); color: #fff;
+    border: none; border-radius: 10px;
+    font-size: 15px; font-weight: 700; font-family: var(--font);
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;
+    transition: opacity .15s;
+  }
+  .btn-submit-all:hover    { opacity: .88; }
+  .btn-submit-all:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* ── SPINNER ── */
+  .spinner {
+    display: inline-block; width: 16px; height: 16px;
+    border: 2.5px solid rgba(255,255,255,.35); border-top-color: #fff;
+    border-radius: 50%; animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── SUCCESS SCREEN ── */
+  .success-screen {
+    display: none; position: fixed; inset: 0;
+    background: var(--navy); z-index: 300;
+    flex-direction: column; align-items: center; justify-content: center;
+    padding: 32px 24px; text-align: center;
+  }
+  .success-screen.show { display: flex; }
+  .success-tick  { font-size: 72px; margin-bottom: 20px; }
+  .success-title { font-size: 26px; font-weight: 800; color: #fff; margin-bottom: 10px; }
+  .success-sub   { font-size: 15px; color: #94a3b8; max-width: 400px; line-height: 1.65; margin-bottom: 28px; }
+  .success-files {
+    background: rgba(255,255,255,0.06); border-radius: 12px;
+    padding: 16px 20px; max-width: 440px; width: 100%;
+    text-align: left; margin-bottom: 24px;
+  }
+  .success-files-title { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .8px; margin-bottom: 10px; }
+  .success-file-row    { font-size: 13px; color: #34d399; padding: 3px 0; display: flex; gap: 8px; align-items: baseline; }
+  .success-file-cat    { font-size: 11px; color: #64748b; flex-shrink: 0; }
+  .success-email-note  { font-size: 12px; color: #64748b; max-width: 380px; line-height: 1.6; }
+
+  @media (max-width: 500px) {
+    .header { padding: 14px 16px; }
+    .card-body, .submit-card-body { padding: 14px 14px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-icon">Pi</div>
+  <div>
+    <div class="header-title">Document Upload Portal</div>
+    <div class="header-sub">Principle and Innovation — Pi Ops</div>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- Welcome -->
+  <div class="card">
+    <div class="card-head">
+      <span class="card-head-icon">📋</span>
+      <span class="card-head-title">Compliance Documents</span>
+    </div>
+    <div class="card-body">
+      <div class="welcome-name" id="welcome-name">Welcome</div>
+      <div class="welcome-meta" id="welcome-meta"></div>
+      <div class="welcome-intro">
+        Upload your compliance documents in each section below.
+        You can upload as many files as you need — come back and add more at any time.
+      </div>
+      <div class="step-hint">
+        <div class="step-hint-num">1</div>
+        <div class="step-hint-text">Upload files to each section as needed.</div>
+      </div>
+      <div class="step-hint" style="margin-top:8px;">
+        <div class="step-hint-num">2</div>
+        <div class="step-hint-text">When you have <strong>finished uploading everything</strong>, scroll to the bottom and press <strong>Submit All Documents to Pi</strong>.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upload sections — built by JS -->
+  <div id="upload-sections"></div>
+
+  <!-- Submit All card — always visible at bottom, requires deliberate action -->
+  <div class="card" id="submit-card">
+    <div class="card-head">
+      <span class="card-head-icon">📤</span>
+      <span class="card-head-title">Submit All Documents to Pi</span>
+    </div>
+    <div class="submit-card-body">
+      <div class="submit-summary">
+        <div class="submit-summary-count" id="submit-count">0</div>
+        <div>
+          <div class="submit-summary-label" id="submit-label">No files uploaded yet</div>
+          <div class="submit-summary-hint">Upload files above, then return here when finished.</div>
+        </div>
+      </div>
+      <div class="submit-warning">
+        ⚠ Only press the button below when you have finished uploading <strong>all</strong> your documents.
+        This will notify Pi that your submission is complete and send you a confirmation email.
+      </div>
+      <button class="btn-submit-all" id="btn-submit-all" onclick="confirmSubmission()" disabled>
+        &#x1F4E4;&nbsp; Submit All Documents to Pi
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Full-screen success overlay -->
+<div class="success-screen" id="success-screen">
+  <div class="success-tick">&#x2705;</div>
+  <div class="success-title">Submission Complete!</div>
+  <div class="success-sub" id="success-sub"></div>
+  <div class="success-files" id="success-files"></div>
+  <div class="success-email-note" id="success-email-note"></div>
+</div>
+
+<script>
+const INSTALLER = {{ installer | tojson }};
+const COMPANY   = {{ company   | tojson }};
+const DATE      = {{ date      | tojson }};
+const EMAIL     = {{ email     | tojson }};
+
+const CATEGORIES = [
+  {
+    key:   'accreditations',
+    icon:  '🏅',
+    title: 'SAA / CEC Accreditation',
+    docs: [
+      'SAA / CEC Accreditation Certificate – current (shows accreditation number & expiry)',
+      'Design Accreditation Certificate – if engaged as designer',
+    ],
+  },
+  {
+    key:   'licences',
+    icon:  '📜',
+    title: 'Electrical Licences',
+    docs: [
+      'Electrical Contractor Licence – certified copy',
+      'Electrical Work Licence – certified copy',
+      'Any additional trade licences relevant to scope of work',
+    ],
+  },
+  {
+    key:   'insurance',
+    icon:  '🛡️',
+    title: 'Insurance – Certificates of Currency',
+    docs: [
+      'Public Liability Insurance – min. $10M (Certificate of Currency)',
+      'Workers Compensation / Workplace Cover – Certificate of Currency',
+      'Professional Indemnity Insurance – Certificate of Currency (if applicable)',
+    ],
+  },
+  {
+    key:   'company-docs',
+    icon:  '🏢',
+    title: 'Company / Business Documentation',
+    docs: [
+      'ABN / ACN confirmation – ASIC company extract or current ABN lookup printout',
+      'Payment bank account details – BSB & Account Number for payment processing',
+    ],
+  },
+];
+
+var uploadedFiles = [];
+
+// ── Welcome ───────────────────────────────────────────────────
+(function() {
+  var name = INSTALLER || 'Installer';
+  var co   = COMPANY   || '';
+  document.getElementById('welcome-name').textContent =
+    'Welcome' + (name ? ', ' + name : '') + (co ? ' — ' + co : '');
+  var meta = [];
+  if (DATE)  meta.push('Agreement executed: ' + DATE);
+  if (EMAIL) meta.push(EMAIL);
+  document.getElementById('welcome-meta').textContent = meta.join('  •  ');
+})();
+
+// ── Build upload sections ─────────────────────────────────────
+(function() {
+  var container = document.getElementById('upload-sections');
+  CATEGORIES.forEach(function(cat) {
+    var section = document.createElement('div');
+    section.className = 'card';
+    section.innerHTML =
+      '<div class="card-head">' +
+        '<span class="card-head-icon">' + cat.icon + '</span>' +
+        '<span class="card-head-title">' + cat.title + '</span>' +
+        '<span class="card-head-sub" id="count-' + cat.key + '">0 uploaded</span>' +
+      '</div>' +
+      '<div class="card-body">' +
+        '<ul class="doc-list">' +
+          cat.docs.map(function(d) { return '<li>' + d + '</li>'; }).join('') +
+        '</ul>' +
+        '<div class="drop-zone" id="zone-' + cat.key + '" onclick="triggerPick(\'' + cat.key + '\')">' +
+          '<div class="drop-zone-icon">📎</div>' +
+          '<div class="drop-zone-label">Click to choose files</div>' +
+          '<div class="drop-zone-hint">or drag and drop — PDF, JPG, PNG, DOC accepted</div>' +
+          '<input type="file" id="input-' + cat.key + '" multiple ' +
+            'accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" ' +
+            'onchange="handleFiles(\'' + cat.key + '\', this.files)">' +
+        '</div>' +
+        '<div class="file-list" id="list-' + cat.key + '"></div>' +
+      '</div>';
+    container.appendChild(section);
+
+    var zone = section.querySelector('.drop-zone');
+    zone.addEventListener('dragover',  function(e) { e.preventDefault(); zone.classList.add('drag-over'); });
+    zone.addEventListener('dragleave', function()  { zone.classList.remove('drag-over'); });
+    zone.addEventListener('drop', function(e) {
+      e.preventDefault();
+      zone.classList.remove('drag-over');
+      handleFiles(cat.key, e.dataTransfer.files);
+    });
+  });
+})();
+
+function triggerPick(catKey) {
+  document.getElementById('input-' + catKey).click();
+}
+
+function handleFiles(catKey, files) {
+  for (var i = 0; i < files.length; i++) uploadFile(catKey, files[i]);
+  document.getElementById('input-' + catKey).value = '';
+}
+
+// ── Upload one file ───────────────────────────────────────────
+function uploadFile(catKey, file) {
+  var list   = document.getElementById('list-' + catKey);
+  var itemId = 'fi-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+
+  var row = document.createElement('div');
+  row.className = 'file-item';
+  row.id = itemId;
+  row.innerHTML =
+    '<span class="file-item-name" title="' + escHtml(file.name) + '">' + escHtml(file.name) + '</span>' +
+    '<span class="file-item-status status-uploading" id="' + itemId + '-st">Uploading…</span>';
+  list.appendChild(row);
+
+  var fd = new FormData();
+  fd.append('installer', INSTALLER);
+  fd.append('company',   COMPANY);
+  fd.append('category',  catKey);
+  fd.append('file',      file);
+
+  fetch('/upload-doc', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      var st = document.getElementById(itemId + '-st');
+      if (res.ok) {
+        st.className   = 'file-item-status status-done';
+        st.textContent = '✓ Saved';
+        uploadedFiles.push({ category: catKey, filename: file.name });
+        updateCategoryCount(catKey);
+        updateSubmitCard();
+      } else {
+        st.className   = 'file-item-status status-error';
+        st.textContent = '✗ ' + (res.error || 'Error');
+      }
+    })
+    .catch(function() {
+      var st = document.getElementById(itemId + '-st');
+      st.className   = 'file-item-status status-error';
+      st.textContent = '✗ Server unreachable';
+    });
+}
+
+// ── Category counter ──────────────────────────────────────────
+var catCounts = {};
+function updateCategoryCount(catKey) {
+  catCounts[catKey] = (catCounts[catKey] || 0) + 1;
+  var el = document.getElementById('count-' + catKey);
+  if (el) {
+    el.textContent = catCounts[catKey] + ' uploaded';
+    el.style.color = '#34d399';
+  }
+}
+
+// ── Submit card counter ───────────────────────────────────────
+function updateSubmitCard() {
+  var n   = uploadedFiles.length;
+  var btn = document.getElementById('btn-submit-all');
+  document.getElementById('submit-count').textContent = n;
+  document.getElementById('submit-label').textContent =
+    n === 1 ? '1 file ready to submit' : n + ' files ready to submit';
+  btn.disabled = (n === 0);
+}
+
+// ── Final submission ──────────────────────────────────────────
+function confirmSubmission() {
+  var btn = document.getElementById('btn-submit-all');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div>&nbsp;Sending confirmation…';
+
+  fetch('/confirm-upload', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      installer: INSTALLER,
+      company:   COMPANY,
+      email:     EMAIL,
+      files:     uploadedFiles,
+    }),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(res) { showSuccess(res.ok, res.error); })
+  .catch(function()  { showSuccess(false, 'Server unreachable'); });
+}
+
+// ── Success screen ────────────────────────────────────────────
+function showSuccess(emailOk, emailErr) {
+  var catLabels = {
+    'accreditations': 'Accreditations',
+    'licences':       'Licences',
+    'insurance':      'Insurance',
+    'company-docs':   'Company Docs',
+  };
+  var html = '<div class="success-files-title">Documents submitted (' + uploadedFiles.length + ')</div>';
+  uploadedFiles.forEach(function(f) {
+    html +=
+      '<div class="success-file-row">' +
+        '<span>&#x2713; ' + escHtml(f.filename) + '</span>' +
+        '<span class="success-file-cat">' + (catLabels[f.category] || f.category) + '</span>' +
+      '</div>';
+  });
+  document.getElementById('success-files').innerHTML = html;
+
+  document.getElementById('success-sub').textContent =
+    'All ' + uploadedFiles.length + ' document' + (uploadedFiles.length !== 1 ? 's have' : ' has') +
+    ' been saved to your Pi compliance folder.';
+
+  var note = emailOk
+    ? (EMAIL ? 'A confirmation email has been sent to ' + EMAIL + ' and to Pi Ops.' : 'Pi Ops has been notified.')
+    : 'Your files were saved. ' + (emailErr ? '(Email error: ' + emailErr + ')' : '');
+  document.getElementById('success-email-note').textContent = note;
+
+  document.getElementById('success-screen').classList.add('show');
+  window.scrollTo(0, 0);
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
