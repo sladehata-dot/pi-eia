@@ -636,10 +636,10 @@ def build_agreement_email_html(installer_name: str, company_name: str,
                 </td>
               </tr>
               <tr>
-                <td style="width:34px;vertical-align:top;padding:0 10px 0 0;">
+                <td style="width:34px;vertical-align:top;padding:0 10px 14px 0;">
                   <table width="24" cellpadding="0" cellspacing="0" border="0"><tr><td width="24" height="24" style="width:24px;height:24px;background:#0A84FF;border-radius:12px;color:#fff;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:bold;line-height:24px;text-align:center;padding:0;">4</td></tr></table>
                 </td>
-                <td style="padding:0;font-size:13px;color:#444;line-height:1.6;">
+                <td style="padding:0 0 14px;font-size:13px;color:#444;line-height:1.6;">
                   <strong>Tick the agreement checkbox</strong> and click
                   <strong>Submit to Pi for Countersigning</strong>.
                 </td>

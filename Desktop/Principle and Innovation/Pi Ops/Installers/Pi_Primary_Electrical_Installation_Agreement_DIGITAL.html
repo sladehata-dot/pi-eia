@@ -1537,7 +1537,8 @@
 //  TWO-PARTY DIGITAL SIGNING WORKFLOW
 //  Modes: 'installer' | 'countersign' | 'executed'
 // ─────────────────────────────────────────────────────────────
-const PI_EMAIL   = 'admin@principleinnovation.tech';
+const PI_EMAIL      = 'admin@principleinnovation.tech';
+const PI_SUBMIT_URL = 'http://localhost:3000/submit-agreement';
 let   WORKFLOW_MODE = 'installer';
 
 const drawPaths = { pi: [], inst: [] };
@@ -1938,7 +1939,7 @@ function submitToPI() {
   var safeName = (d.bizName || 'Installer').replace(/[^a-zA-Z0-9]+/g, '_');
 
   // POST to the Pi server — server emails Pi directly with the signed HTML attached
-  fetch(window.location.origin + '/submit-agreement', {
+  fetch(PI_SUBMIT_URL, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     body:    JSON.stringify({
