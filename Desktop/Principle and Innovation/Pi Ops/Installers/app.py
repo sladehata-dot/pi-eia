@@ -29,7 +29,8 @@ app = Flask(__name__)
 #   SERVER_URL = "https://principleinnovation.tech"
 SERVER_URL = "http://localhost:3000"
 
-AGREEMENT_HTML = Path(__file__).parent / "Pi_Primary_Electrical_Installation_Agreement_DIGITAL.html"
+AGREEMENT_HTML    = Path(__file__).parent / "Pi_Primary_Electrical_Installation_Agreement_DIGITAL.html"
+SMTP_CONFIG_FILE  = Path(__file__).parent / ".smtp_config.json"   # persists across restarts
 
 # ── Mail provider presets (mirrors the GUI) ────────────────────────────────────
 MAIL_PRESETS = {
@@ -39,10 +40,34 @@ MAIL_PRESETS = {
     "Zoho Mail":                    ("smtp.zoho.com.au",             465),
 }
 
-# ── Routes ─────────────────────────────────────────────────────────────────────
+# ── SMTP config cache — persisted to disk so it survives server restarts ───────
+def _load_smtp() -> dict:
+    try:
+        if SMTP_CONFIG_FILE.exists():
+            return json.loads(SMTP_CONFIG_FILE.read_text())
+    except Exception:
+        pass
+    return {}
 
-# Cached SMTP config — saved when Pi runs Phase 1 so /submit-agreement can reuse it
-_cached_smtp: dict = {}
+def _save_smtp(cfg: dict) -> None:
+    try:
+        SMTP_CONFIG_FILE.write_text(json.dumps(cfg))
+    except Exception:
+        pass
+
+_cached_smtp: dict = _load_smtp()   # load at startup
+
+# ── CORS — allow requests from the local file system and localhost ─────────────
+@app.after_request
+def add_cors(response):
+    """Allow the agreement HTML to POST here whether opened from server or disk."""
+    response.headers["Access-Control-Allow-Origin"]  = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    return response
+
+
+# ── Routes ─────────────────────────────────────────────────────────────────────
 
 def make_agreement_url(name: str, company: str, email: str) -> str:
     """Return a URL that opens the agreement pre-filled with installer details."""
@@ -73,6 +98,7 @@ def run_workflow():
     Runs the selected workflow phase and streams log output back as
     Server-Sent Events so the browser log updates in real time.
     """
+    global _cached_smtp
     data = request.get_json(force=True)
 
     phase    = data.get("phase",    "agreement")
@@ -100,8 +126,11 @@ def run_workflow():
         "smtp_password": password,
     }
 
-    global _cached_smtp
-    _cached_smtp = smtp_cfg
+    # Cache and persist SMTP config (not during dry run — password not entered)
+    if not dry_run and password:
+        _cached_smtp = smtp_cfg
+        _save_smtp(smtp_cfg)
+
     onb.DRY_RUN = dry_run
 
     # Generate agreement link so the email contains a button, not an attachment
@@ -162,12 +191,16 @@ def run_workflow():
     )
 
 
-@app.route("/submit-agreement", methods=["POST"])
+@app.route("/submit-agreement", methods=["POST", "OPTIONS"])
 def submit_agreement():
     """Receive the installer-signed agreement HTML and email it to Pi for countersigning."""
+    # Handle CORS preflight
+    if request.method == "OPTIONS":
+        return jsonify({}), 200
+
     if not _cached_smtp:
         return jsonify({"ok": False,
-                        "error": "Email not configured — please run Phase 1 first."})
+                        "error": "Email not configured — please run Phase 1 (Send Email) first."})
     try:
         data       = request.get_json(force=True)
         html       = data.get("html",      "")
@@ -191,6 +224,10 @@ if __name__ == "__main__":
     url  = f"http://localhost:{port}"
     print(f"\n  Pi Ops – Installer Onboarding")
     print(f"  Running at  {url}")
+    if _cached_smtp:
+        print(f"  SMTP config loaded from disk ({_cached_smtp.get('smtp_host','')})")
+    else:
+        print(f"  No SMTP config yet — run Phase 1 to configure email.")
     print(f"  Press Ctrl+C to stop.\n")
     threading.Timer(1.2, lambda: webbrowser.open(url)).start()
     app.run(host="localhost", port=port, debug=False, threaded=True)
