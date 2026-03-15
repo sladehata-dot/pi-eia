@@ -1609,7 +1609,7 @@ function applyMode() {
     // Submit
     const btn = document.getElementById('submit-btn');
     btn.onclick = executeAgreement;
-    document.getElementById('submit-btn-text').textContent = 'Execute Agreement &amp; Send to Both Parties →';
+    document.getElementById('submit-btn-text').innerHTML = 'Execute Agreement &amp; Send to Both Parties &rarr;';
     checkReady();
 
   } else if (WORKFLOW_MODE === 'executed' && d) {
@@ -2024,39 +2024,45 @@ function executeAgreement() {
 
   var newHTML  = generateHTML(payload);
   var safeName = (instData.bizName || 'Installer').replace(/[^a-zA-Z0-9]+/g, '_');
-  var safeDate = piDate.replace(/\s+/g, '_');
-  downloadHTML(newHTML, 'Pi_Agreement_EXECUTED_' + safeName + '_' + safeDate + '.html');
+  var safeDate = piDate.replace(/[^a-zA-Z0-9]+/g, '_');
 
-  setTimeout(function() {
-    var instEmail = instData.instEmail || '';
-    var instName  = instData.instName  || 'Installer';
-    var bizName   = instData.bizName   || '';
-    var subj = encodeURIComponent('Pi \u2013 Fully Executed Installer Agreement | ' + bizName);
-    var body = encodeURIComponent(
-      'Dear ' + instName + ',\n\n' +
-      'Please find attached your fully executed Pi Primary Electrical Installation Agreement.\n\n' +
-      'Both parties have now signed. Please keep this for your records.\n' +
-      'Open the attached HTML file to view or print your executed copy.\n\n' +
-      'Reference: ' + (updRef || '') + '\n' +
-      'Execution Date: ' + piDate + '\n\n' +
-      'Kind regards,\n' +
-      'Slade Hata\n' +
-      'Pi Ops Pty Ltd\n' +
-      'admin@principleinnovation.tech'
-    );
-    var bcc = encodeURIComponent(PI_EMAIL);
-    var to  = instEmail || PI_EMAIL;
-    window.location.href = 'mailto:' + to + '?bcc=' + bcc + '&subject=' + subj + '&body=' + body;
-  }, 800);
-
-  setTimeout(function() {
+  // POST executed agreement to server — server emails both parties with executed copy attached
+  fetch('http://localhost:3000/execute-agreement', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({
+      html:      newHTML,
+      bizName:   instData.bizName   || '',
+      instName:  instData.instName  || '',
+      instEmail: instData.instEmail || '',
+      ref:       updRef  || '',
+      execDate:  piDate
+    })
+  }).then(function(r) { return r.json(); }).then(function(result) {
+    // Always download a local copy for Pi's records
+    downloadHTML(newHTML, 'Pi_Agreement_EXECUTED_' + safeName + '_' + safeDate + '.html');
+    if (result.ok) {
+      alert(
+        '\u2713  Agreement fully executed!\n\n' +
+        'Executed copies have been emailed to both parties.\n' +
+        'A local copy has also been saved to your Downloads.'
+      );
+    } else {
+      alert(
+        '\u26a0  Could not send emails automatically.\n\n' +
+        'Error: ' + result.error + '\n\n' +
+        'The executed copy has been downloaded — please\n' +
+        'forward it manually to: ' + (instData.instEmail || PI_EMAIL)
+      );
+    }
+  }).catch(function() {
+    downloadHTML(newHTML, 'Pi_Agreement_EXECUTED_' + safeName + '_' + safeDate + '.html');
     alert(
-      '\u2713  Agreement Executed!\n\n' +
-      'The fully executed copy has been downloaded.\n' +
-      'Your email client has opened \u2014 attach the downloaded file and send to the installer.\n\n' +
-      'Both you and the installer now have a fully executed copy.'
+      '\u26a0  Server unreachable.\n\n' +
+      'The executed agreement has been downloaded.\n' +
+      'Please email it manually to: ' + (instData.instEmail || PI_EMAIL)
     );
-  }, 1400);
+  });
 }
 
 // ── DELIVERY TOGGLE ───────────────────────────────────────────

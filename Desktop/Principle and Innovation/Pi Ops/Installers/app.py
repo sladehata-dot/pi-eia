@@ -217,6 +217,31 @@ def submit_agreement():
         return jsonify({"ok": False, "error": str(exc)})
 
 
+@app.route("/execute-agreement", methods=["POST", "OPTIONS"])
+def execute_agreement():
+    """Email the fully executed agreement to the installer and Pi."""
+    if request.method == "OPTIONS":
+        return jsonify({}), 200
+
+    if not _cached_smtp:
+        return jsonify({"ok": False,
+                        "error": "Email not configured — please run Phase 1 first."})
+    try:
+        data       = request.get_json(force=True)
+        html       = data.get("html",      "")
+        biz_name   = data.get("bizName",   "Installer")
+        inst_name  = data.get("instName",  "")
+        inst_email = data.get("instEmail", "")
+        ref        = data.get("ref",       "")
+        exec_date  = data.get("execDate",  "")
+        onb.send_executed_to_both(
+            inst_name, biz_name, inst_email, ref, exec_date, html, _cached_smtp
+        )
+        return jsonify({"ok": True})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)})
+
+
 # ── Launch ─────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":

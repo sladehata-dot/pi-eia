@@ -571,6 +571,64 @@ def send_signed_to_pi(installer_name: str, company_name: str,
             server.sendmail(PI_EMAIL, [PI_EMAIL], msg.as_string())
 
 
+# ── NOTIFY BOTH: EXECUTED AGREEMENT ──────────────────────────────────────────
+
+def send_executed_to_both(installer_name: str, company_name: str,
+                          installer_email: str, ref: str, exec_date: str,
+                          executed_html: str, smtp_cfg: dict) -> None:
+    """Email the fully executed agreement to the installer and BCC Pi.
+    Called by app.py /execute-agreement after Pi countersigns."""
+    safe_name = re.sub(r'[^a-zA-Z0-9]+', '_', company_name)
+    filename  = f"Pi_Agreement_EXECUTED_{safe_name}.html"
+    port      = int(smtp_cfg.get("smtp_port", 465))
+    to_email  = installer_email or PI_EMAIL
+
+    msg            = MIMEMultipart("mixed")
+    msg["Subject"] = f"Pi \u2013 Fully Executed Installer Agreement | {company_name}"
+    msg["From"]    = f"Admin Team \u2014 Principle and Innovation (Pi) <{PI_EMAIL}>"
+    msg["To"]      = to_email
+    msg["Bcc"]     = PI_EMAIL
+
+    body_html = f"""<p style="font-family:Arial,sans-serif;font-size:14px;color:#333;margin:0 0 16px;">
+        Dear {installer_name},</p>
+      <p style="font-family:Arial,sans-serif;font-size:14px;color:#333;margin:0 0 16px;">
+        Your <strong>Pi Primary Electrical Installation Agreement</strong> has been
+        fully executed by both parties. The executed copy is attached for your records.</p>
+      <table style="font-family:Arial,sans-serif;font-size:13px;color:#444;border-collapse:collapse;margin:0 0 20px;">
+        <tr><td style="padding:4px 20px 4px 0;font-weight:bold;">Company</td><td>{company_name}</td></tr>
+        <tr><td style="padding:4px 20px 4px 0;font-weight:bold;">Reference</td><td>{ref}</td></tr>
+        <tr><td style="padding:4px 20px 4px 0;font-weight:bold;">Execution Date</td><td>{exec_date}</td></tr>
+      </table>
+      <p style="font-family:Arial,sans-serif;font-size:13px;color:#555;margin:0 0 24px;">
+        Open the attached HTML file in Chrome or Edge to view or print your executed copy.</p>
+      <p style="font-family:Arial,sans-serif;font-size:14px;color:#333;margin:0;">
+        Sincerely,<br>
+        <strong>Admin Team &mdash; Principle and Innovation (Pi)</strong><br>
+        <a href="mailto:{PI_EMAIL}" style="color:#0A84FF;">{PI_EMAIL}</a></p>"""
+
+    body_part = MIMEMultipart("alternative")
+    body_part.attach(MIMEText(body_html, "html"))
+    msg.attach(body_part)
+
+    att = MIMEApplication(executed_html.encode("utf-8"), Name=filename)
+    att.add_header("Content-Disposition", "attachment", filename=filename)
+    msg.attach(att)
+
+    import ssl as _ssl
+    ctx = _ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode    = _ssl.CERT_NONE
+    if port == 465:
+        with smtplib.SMTP_SSL(smtp_cfg["smtp_host"], port, context=ctx) as server:
+            server.login(smtp_cfg["smtp_user"], smtp_cfg["smtp_password"])
+            server.sendmail(PI_EMAIL, [to_email, PI_EMAIL], msg.as_string())
+    else:
+        with smtplib.SMTP(smtp_cfg["smtp_host"], port) as server:
+            server.starttls(context=ctx)
+            server.login(smtp_cfg["smtp_user"], smtp_cfg["smtp_password"])
+            server.sendmail(PI_EMAIL, [to_email, PI_EMAIL], msg.as_string())
+
+
 # ── STEP 0: AGREEMENT EMAIL (PHASE 1) ─────────────────────────────────────────
 
 def build_agreement_email_html(installer_name: str, company_name: str,
