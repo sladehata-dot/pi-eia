@@ -937,6 +937,7 @@
       <tbody>
         <tr><td>Solar PV</td><td>$0.30 / W</td><td class="note">—</td></tr>
         <tr><td>Battery Energy Storage System with Back-Up Circuit – Installation</td><td>$1,500</td><td class="note">Equipment supplied by Pi; includes essential loads backup circuit</td></tr>
+        <tr><td>Smoke Alarm – Installation</td><td>$50 per alarm</td><td class="note">Supplied by Pi</td></tr>
         <tr><td>Extra Items / Non-Standard Works</td><td>By Quote</td><td class="note">Confirmed in writing before commencement</td></tr>
       </tbody>
     </table>
@@ -1788,7 +1789,16 @@ function populateInstallerFields(d) {
   set('f-address',    d.address);
   set('f-phone',      d.phone);
   set('f-email',      d.instEmail);
-  set('f-ref',        d.ref);
+  // Auto-generate reference as dd/mm/yyyy – Company Name if not already embedded
+  if (d.ref) {
+    set('f-ref', d.ref);
+  } else if (d.bizName) {
+    var _now  = new Date();
+    var _dd   = String(_now.getDate()).padStart(2,'0');
+    var _mm   = String(_now.getMonth()+1).padStart(2,'0');
+    var _yyyy = _now.getFullYear();
+    set('f-ref', _dd + '/' + _mm + '/' + _yyyy + ' \u2013 ' + d.bizName);
+  }
   set('f-date',       d.execDate || d.instDate);
   set('inst-name',    d.instName);
   set('inst-pos',     d.instPos);
@@ -2037,6 +2047,12 @@ function setTodayPlaceholders() {
     var el = document.getElementById(id);
     if (el && !el.value) el.placeholder = fmt;
   });
+  // Default reference: dd/mm/yyyy (company name appended once known)
+  var dd   = String(today.getDate()).padStart(2,'0');
+  var mm   = String(today.getMonth()+1).padStart(2,'0');
+  var yyyy = today.getFullYear();
+  var refEl = document.getElementById('f-ref');
+  if (refEl && !refEl.value) refEl.value = dd + '/' + mm + '/' + yyyy;
 }
 </script>
 

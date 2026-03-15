@@ -587,7 +587,7 @@ def build_agreement_email_html(installer_name: str, company_name: str,
                 </td>
               </tr>
               <tr>
-                <td width="32" style="vertical-align:top;padding:2px 12px 0;">
+                <td width="32" style="vertical-align:top;padding:2px 12px 0 0;">
                   <div style="background:#0A84FF;color:#fff;border-radius:50%;width:24px;height:24px;
                                text-align:center;line-height:24px;font-weight:700;font-size:12px;">4</div>
                 </td>
@@ -720,10 +720,10 @@ def build_agreement_email_html(installer_name: str, company_name: str,
         <a href="mailto:{PI_EMAIL}" style="color:#0A84FF;">{PI_EMAIL}</a>.
       </p>
       <p style="color:#333;line-height:1.7;margin:24px 0 0;">
-        Kind regards,<br>
-        <strong>{PI_NAME}</strong><br>
-        <span style="color:#666;font-size:13px;">{PI_COMPANY}</span><br>
-        <a href="mailto:{PI_EMAIL}" style="color:#0A84FF;font-size:13px;">{PI_EMAIL}</a>
+        Sincerely,<br>
+        <strong>Admin Team &mdash; Principle and Innovation (Pi)</strong><br>
+        <a href="mailto:admin@principleinnovation.tech"
+           style="color:#0A84FF;font-size:13px;">admin@principleinnovation.tech</a>
       </p>
 
     </td>
