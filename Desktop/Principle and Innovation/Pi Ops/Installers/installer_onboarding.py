@@ -325,10 +325,9 @@ def build_email_html(installer_name: str, company_name: str, upload_instructions
       </p>
 
       <p style="color:#333;line-height:1.7;margin:24px 0 0;">
-        Kind regards,<br>
-        <strong>{PI_NAME}</strong><br>
-        <span style="color:#666;font-size:13px;">{PI_COMPANY}</span><br>
-        <a href="mailto:{PI_EMAIL}" style="color:#4a90d9;font-size:13px;">{PI_EMAIL}</a>
+        Sincerely,<br>
+        <strong>Admin Team &mdash; Principle and Innovation (Pi)</strong><br>
+        <a href="mailto:admin@principleinnovation.tech" style="color:#4a90d9;font-size:13px;">admin@principleinnovation.tech</a>
       </p>
 
     </td>
@@ -519,6 +518,59 @@ def send_onboarding_email(installer_name: str, company_name: str,
         return False
 
 
+# ── NOTIFY PI: INSTALLER HAS SIGNED ──────────────────────────────────────────
+
+def send_signed_to_pi(installer_name: str, company_name: str,
+                      installer_email: str, abn: str, inst_date: str,
+                      signed_html: str, smtp_cfg: dict) -> None:
+    """Email Pi with the signed agreement HTML as an attachment for countersigning.
+    Called automatically by app.py /submit-agreement when the installer submits."""
+    safe_name = re.sub(r'[^a-zA-Z0-9]+', '_', company_name)
+    filename  = f"Pi_Agreement_Signed_{safe_name}.html"
+    port      = int(smtp_cfg.get("smtp_port", 465))
+
+    msg            = MIMEMultipart("mixed")
+    msg["Subject"] = f"Pi \u2013 Installer Agreement Signed | {company_name}"
+    msg["From"]    = f"Pi Onboarding <{PI_EMAIL}>"
+    msg["To"]      = PI_EMAIL
+
+    body_html = f"""<p style="font-family:Arial,sans-serif;font-size:14px;color:#333;">
+        The installer agreement for <strong>{company_name}</strong> has been signed
+        and submitted digitally.</p>
+      <table style="font-family:Arial,sans-serif;font-size:13px;color:#444;border-collapse:collapse;">
+        <tr><td style="padding:4px 16px 4px 0;font-weight:bold;">Installer</td><td>{installer_name}</td></tr>
+        <tr><td style="padding:4px 16px 4px 0;font-weight:bold;">Company</td><td>{company_name}</td></tr>
+        <tr><td style="padding:4px 16px 4px 0;font-weight:bold;">ABN</td><td>{abn}</td></tr>
+        <tr><td style="padding:4px 16px 4px 0;font-weight:bold;">Installer email</td><td>{installer_email}</td></tr>
+        <tr><td style="padding:4px 16px 4px 0;font-weight:bold;">Signed</td><td>{inst_date}</td></tr>
+      </table>
+      <p style="font-family:Arial,sans-serif;font-size:13px;color:#555;margin-top:16px;">
+        Open the attached HTML file in Chrome or Edge, review the agreement,
+        draw your countersignature and click <strong>Execute Agreement</strong>.</p>"""
+
+    body_part = MIMEMultipart("alternative")
+    body_part.attach(MIMEText(body_html, "html"))
+    msg.attach(body_part)
+
+    att = MIMEApplication(signed_html.encode("utf-8"), Name=filename)
+    att.add_header("Content-Disposition", "attachment", filename=filename)
+    msg.attach(att)
+
+    import ssl as _ssl
+    ctx = _ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode    = _ssl.CERT_NONE
+    if port == 465:
+        with smtplib.SMTP_SSL(smtp_cfg["smtp_host"], port, context=ctx) as server:
+            server.login(smtp_cfg["smtp_user"], smtp_cfg["smtp_password"])
+            server.sendmail(PI_EMAIL, [PI_EMAIL], msg.as_string())
+    else:
+        with smtplib.SMTP(smtp_cfg["smtp_host"], port) as server:
+            server.starttls(context=ctx)
+            server.login(smtp_cfg["smtp_user"], smtp_cfg["smtp_password"])
+            server.sendmail(PI_EMAIL, [PI_EMAIL], msg.as_string())
+
+
 # ── STEP 0: AGREEMENT EMAIL (PHASE 1) ─────────────────────────────────────────
 
 def build_agreement_email_html(installer_name: str, company_name: str,
@@ -557,39 +609,35 @@ def build_agreement_email_html(installer_name: str, company_name: str,
             </p>
             <table width="100%" cellpadding="0" cellspacing="0">
               <tr>
-                <td width="32" style="vertical-align:top;padding:2px 12px 12px 0;">
-                  <div style="background:#0A84FF;color:#fff;border-radius:50%;width:24px;height:24px;
-                               text-align:center;line-height:24px;font-weight:700;font-size:12px;">1</div>
+                <td style="width:34px;vertical-align:top;padding:0 10px 14px 0;">
+                  <table width="24" cellpadding="0" cellspacing="0" border="0"><tr><td width="24" height="24" style="width:24px;height:24px;background:#0A84FF;border-radius:12px;color:#fff;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:bold;line-height:24px;text-align:center;padding:0;">1</td></tr></table>
                 </td>
-                <td style="padding:0 0 12px;font-size:13px;color:#444;line-height:1.6;">
+                <td style="padding:0 0 14px;font-size:13px;color:#444;line-height:1.6;">
                   <strong>Complete your details</strong> — Business Name, ABN, Responsible
                   Individual, Primary Contact, Address, Phone, and Email.
                 </td>
               </tr>
               <tr>
-                <td width="32" style="vertical-align:top;padding:2px 12px 12px 0;">
-                  <div style="background:#0A84FF;color:#fff;border-radius:50%;width:24px;height:24px;
-                               text-align:center;line-height:24px;font-weight:700;font-size:12px;">2</div>
+                <td style="width:34px;vertical-align:top;padding:0 10px 14px 0;">
+                  <table width="24" cellpadding="0" cellspacing="0" border="0"><tr><td width="24" height="24" style="width:24px;height:24px;background:#0A84FF;border-radius:12px;color:#fff;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:bold;line-height:24px;text-align:center;padding:0;">2</td></tr></table>
                 </td>
-                <td style="padding:0 0 12px;font-size:13px;color:#444;line-height:1.6;">
+                <td style="padding:0 0 14px;font-size:13px;color:#444;line-height:1.6;">
                   <strong>Select your hardware delivery preference</strong> and
                   add any relevant details.
                 </td>
               </tr>
               <tr>
-                <td width="32" style="vertical-align:top;padding:2px 12px 12px 0;">
-                  <div style="background:#0A84FF;color:#fff;border-radius:50%;width:24px;height:24px;
-                               text-align:center;line-height:24px;font-weight:700;font-size:12px;">3</div>
+                <td style="width:34px;vertical-align:top;padding:0 10px 14px 0;">
+                  <table width="24" cellpadding="0" cellspacing="0" border="0"><tr><td width="24" height="24" style="width:24px;height:24px;background:#0A84FF;border-radius:12px;color:#fff;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:bold;line-height:24px;text-align:center;padding:0;">3</td></tr></table>
                 </td>
-                <td style="padding:0 0 12px;font-size:13px;color:#444;line-height:1.6;">
+                <td style="padding:0 0 14px;font-size:13px;color:#444;line-height:1.6;">
                   <strong>Draw your signature</strong> and enter your full name,
                   position, and today's date.
                 </td>
               </tr>
               <tr>
-                <td width="32" style="vertical-align:top;padding:2px 12px 0 0;">
-                  <div style="background:#0A84FF;color:#fff;border-radius:50%;width:24px;height:24px;
-                               text-align:center;line-height:24px;font-weight:700;font-size:12px;">4</div>
+                <td style="width:34px;vertical-align:top;padding:0 10px 0 0;">
+                  <table width="24" cellpadding="0" cellspacing="0" border="0"><tr><td width="24" height="24" style="width:24px;height:24px;background:#0A84FF;border-radius:12px;color:#fff;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:bold;line-height:24px;text-align:center;padding:0;">4</td></tr></table>
                 </td>
                 <td style="padding:0;font-size:13px;color:#444;line-height:1.6;">
                   <strong>Tick the agreement checkbox</strong> and click
@@ -611,18 +659,16 @@ def build_agreement_email_html(installer_name: str, company_name: str,
             </p>
             <table width="100%" cellpadding="0" cellspacing="0">
               <tr>
-                <td width="32" style="vertical-align:top;padding:2px 12px 14px 0;">
-                  <div style="background:#0A84FF;color:#fff;border-radius:50%;width:24px;height:24px;
-                               text-align:center;line-height:24px;font-weight:700;font-size:12px;">1</div>
+                <td style="width:34px;vertical-align:top;padding:0 10px 14px 0;">
+                  <table width="24" cellpadding="0" cellspacing="0" border="0"><tr><td width="24" height="24" style="width:24px;height:24px;background:#0A84FF;border-radius:12px;color:#fff;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:bold;line-height:24px;text-align:center;padding:0;">1</td></tr></table>
                 </td>
                 <td style="padding:0 0 14px;font-size:13px;color:#444;line-height:1.6;">
                   <strong>Open the attached file</strong> in Chrome or Edge.
                 </td>
               </tr>
               <tr>
-                <td width="32" style="vertical-align:top;padding:2px 12px 14px 0;">
-                  <div style="background:#0A84FF;color:#fff;border-radius:50%;width:24px;height:24px;
-                               text-align:center;line-height:24px;font-weight:700;font-size:12px;">2</div>
+                <td style="width:34px;vertical-align:top;padding:0 10px 14px 0;">
+                  <table width="24" cellpadding="0" cellspacing="0" border="0"><tr><td width="24" height="24" style="width:24px;height:24px;background:#0A84FF;border-radius:12px;color:#fff;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:bold;line-height:24px;text-align:center;padding:0;">2</td></tr></table>
                 </td>
                 <td style="padding:0 0 14px;font-size:13px;color:#444;line-height:1.6;">
                   <strong>Complete your details</strong> — Business Name, ABN, Responsible
@@ -630,27 +676,24 @@ def build_agreement_email_html(installer_name: str, company_name: str,
                 </td>
               </tr>
               <tr>
-                <td width="32" style="vertical-align:top;padding:2px 12px 14px 0;">
-                  <div style="background:#0A84FF;color:#fff;border-radius:50%;width:24px;height:24px;
-                               text-align:center;line-height:24px;font-weight:700;font-size:12px;">3</div>
+                <td style="width:34px;vertical-align:top;padding:0 10px 14px 0;">
+                  <table width="24" cellpadding="0" cellspacing="0" border="0"><tr><td width="24" height="24" style="width:24px;height:24px;background:#0A84FF;border-radius:12px;color:#fff;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:bold;line-height:24px;text-align:center;padding:0;">3</td></tr></table>
                 </td>
                 <td style="padding:0 0 14px;font-size:13px;color:#444;line-height:1.6;">
                   <strong>Select your hardware delivery preference</strong>.
                 </td>
               </tr>
               <tr>
-                <td width="32" style="vertical-align:top;padding:2px 12px 14px 0;">
-                  <div style="background:#0A84FF;color:#fff;border-radius:50%;width:24px;height:24px;
-                               text-align:center;line-height:24px;font-weight:700;font-size:12px;">4</div>
+                <td style="width:34px;vertical-align:top;padding:0 10px 14px 0;">
+                  <table width="24" cellpadding="0" cellspacing="0" border="0"><tr><td width="24" height="24" style="width:24px;height:24px;background:#0A84FF;border-radius:12px;color:#fff;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:bold;line-height:24px;text-align:center;padding:0;">4</td></tr></table>
                 </td>
                 <td style="padding:0 0 14px;font-size:13px;color:#444;line-height:1.6;">
                   <strong>Draw your signature</strong>, enter your name, position, and today's date.
                 </td>
               </tr>
               <tr>
-                <td width="32" style="vertical-align:top;padding:2px 12px 0 0;">
-                  <div style="background:#0A84FF;color:#fff;border-radius:50%;width:24px;height:24px;
-                               text-align:center;line-height:24px;font-weight:700;font-size:12px;">5</div>
+                <td style="width:34px;vertical-align:top;padding:0 10px 0 0;">
+                  <table width="24" cellpadding="0" cellspacing="0" border="0"><tr><td width="24" height="24" style="width:24px;height:24px;background:#0A84FF;border-radius:12px;color:#fff;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:bold;line-height:24px;text-align:center;padding:0;">5</td></tr></table>
                 </td>
                 <td style="padding:0;font-size:13px;color:#444;line-height:1.6;">
                   <strong>Tick the checkbox</strong> and click <strong>Submit to Pi for Countersigning</strong>.

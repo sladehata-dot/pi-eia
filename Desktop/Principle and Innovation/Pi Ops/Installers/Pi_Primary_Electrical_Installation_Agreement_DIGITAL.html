@@ -937,7 +937,6 @@
       <tbody>
         <tr><td>Solar PV</td><td>$0.30 / W</td><td class="note">—</td></tr>
         <tr><td>Battery Energy Storage System with Back-Up Circuit – Installation</td><td>$1,500</td><td class="note">Equipment supplied by Pi; includes essential loads backup circuit</td></tr>
-        <tr><td>Smoke Alarm – Installation</td><td>$50 per alarm</td><td class="note">Supplied by Pi</td></tr>
         <tr><td>Extra Items / Non-Standard Works</td><td>By Quote</td><td class="note">Confirmed in writing before commencement</td></tr>
       </tbody>
     </table>
@@ -1019,6 +1018,11 @@
             <td>Panel Tilt Framing</td>
             <td>$15 per panel</td>
             <td class="note">Applied where tilt mounting is required to achieve the design pitch or orientation</td>
+          </tr>
+          <tr>
+            <td>Smoke Alarm – Installation</td>
+            <td>$50 per alarm</td>
+            <td class="note">Supplied by Pi</td>
           </tr>
           <tr>
             <td>Bollard Installation</td>
@@ -1932,35 +1936,52 @@ function submitToPI() {
   var payload  = Object.assign({ mode: 'countersign' }, d);
   var newHTML  = generateHTML(payload);
   var safeName = (d.bizName || 'Installer').replace(/[^a-zA-Z0-9]+/g, '_');
-  downloadHTML(newHTML, 'Pi_Agreement_Signed_' + safeName + '.html');
 
-  setTimeout(function() {
+  // POST to the Pi server — server emails Pi directly with the signed HTML attached
+  fetch(window.location.origin + '/submit-agreement', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({
+      html:      newHTML,
+      bizName:   d.bizName,
+      instName:  d.instName,
+      instEmail: d.instEmail,
+      abn:       d.abn,
+      instDate:  d.instDate
+    })
+  }).then(function(r) { return r.json(); }).then(function(result) {
+    if (result.ok) {
+      alert(
+        '\u2713  Agreement submitted to Pi!\n\n' +
+        'Pi will review, countersign, and send you\n' +
+        'a fully executed copy to ' + (d.instEmail || 'your email') + '.'
+      );
+    } else {
+      // Server error — fall back to download
+      downloadHTML(newHTML, 'Pi_Agreement_Signed_' + safeName + '.html');
+      alert(
+        '\u26a0  Could not submit automatically.\n\n' +
+        'Your signed agreement has been downloaded.\n' +
+        'Please email it to: ' + PI_EMAIL
+      );
+    }
+  }).catch(function() {
+    // Server unreachable — fall back to download + mailto
+    downloadHTML(newHTML, 'Pi_Agreement_Signed_' + safeName + '.html');
     var subj = encodeURIComponent('Pi \u2013 Installer Agreement Signed | ' + d.bizName);
     var body = encodeURIComponent(
-      'Hi,\n\n' +
-      'Please find attached the Pi Primary Electrical Installation Agreement signed by ' +
+      'Hi,\n\nPlease find attached the Pi Primary Electrical Installation Agreement signed by ' +
       d.instName + ' (' + d.bizName + ').\n\n' +
-      'To countersign:\n' +
-      '1. Open the attached HTML file in Chrome or Edge\n' +
-      '2. Review the agreement\n' +
-      '3. Draw your signature and click Execute Agreement\n\n' +
-      'Installer: ' + d.instName + '\n' +
-      'Company:   ' + d.bizName  + '\n' +
-      'ABN:       ' + d.abn      + '\n' +
-      'Signed:    ' + d.instDate + '\n\n' +
-      'Kind regards,\n' + d.instName + '\n' + d.bizName
+      'Installer: ' + d.instName + '\nCompany: ' + d.bizName +
+      '\nABN: ' + d.abn + '\nSigned: ' + d.instDate
     );
-    window.location.href = 'mailto:' + PI_EMAIL + '?subject=' + subj + '&body=' + body;
-  }, 800);
-
-  setTimeout(function() {
-    alert(
-      '\u2713  Signed copy downloaded!\n\n' +
-      'Your email client has opened with a draft to Pi.\n' +
-      'Attach the downloaded HTML file to the email and send it.\n\n' +
-      'Pi will countersign and return a fully executed copy to you.'
-    );
-  }, 1400);
+    setTimeout(function() {
+      window.location.href = 'mailto:' + PI_EMAIL + '?subject=' + subj + '&body=' + body;
+    }, 600);
+    setTimeout(function() {
+      alert('\u26a0  Server unreachable.\n\nYour signed agreement has been downloaded.\nYour email client has opened — please attach and send to Pi.');
+    }, 1200);
+  });
 }
 
 // ── EXECUTE AGREEMENT (Pi countersign action) ────────────────

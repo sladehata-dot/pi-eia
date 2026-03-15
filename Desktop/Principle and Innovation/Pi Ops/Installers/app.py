@@ -41,6 +41,9 @@ MAIL_PRESETS = {
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
 
+# Cached SMTP config — saved when Pi runs Phase 1 so /submit-agreement can reuse it
+_cached_smtp: dict = {}
+
 def make_agreement_url(name: str, company: str, email: str) -> str:
     """Return a URL that opens the agreement pre-filled with installer details."""
     data = {
@@ -97,6 +100,8 @@ def run_workflow():
         "smtp_password": password,
     }
 
+    global _cached_smtp
+    _cached_smtp = smtp_cfg
     onb.DRY_RUN = dry_run
 
     # Generate agreement link so the email contains a button, not an attachment
@@ -155,6 +160,28 @@ def run_workflow():
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@app.route("/submit-agreement", methods=["POST"])
+def submit_agreement():
+    """Receive the installer-signed agreement HTML and email it to Pi for countersigning."""
+    if not _cached_smtp:
+        return jsonify({"ok": False,
+                        "error": "Email not configured — please run Phase 1 first."})
+    try:
+        data       = request.get_json(force=True)
+        html       = data.get("html",      "")
+        biz_name   = data.get("bizName",   "Installer")
+        inst_name  = data.get("instName",  "")
+        inst_email = data.get("instEmail", "")
+        abn        = data.get("abn",       "")
+        inst_date  = data.get("instDate",  "")
+        onb.send_signed_to_pi(
+            inst_name, biz_name, inst_email, abn, inst_date, html, _cached_smtp
+        )
+        return jsonify({"ok": True})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)})
 
 
 # ── Launch ─────────────────────────────────────────────────────────────────────
